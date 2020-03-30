@@ -84,6 +84,12 @@ void SimpleDiffuseGIRayGen()
     
     // Does this g-buffer pixel contain a valid piece of geometry?  (0 in pos.w for invalid)
     bool isGeometryValid = (worldPos.w != 0.0f);
+    
+    if (!isGeometryValid)
+    {
+        gOutput[launchIndex] = float4(difMatlColor.rgb, 1.0f);
+        return;
+    }
 
 	// Extract and compute some material and geometric parameters
     float roughness = specMatlColor.a * specMatlColor.a;
@@ -122,6 +128,8 @@ void SimpleDiffuseGIRayGen()
     cameraPath[0].posW = gCamera.posW;
     cameraPath[0].N = gCamera.cameraW;
     cameraPath[0].color = float3(1.0f); // We = 1 for pinhole camera
+    cameraPath[0].pdfBackward = 1.0f;
+    cameraPath[0].pdfForward = 1.0f;
     
 	// Do shading, if we have geoemtry here (otherwise, output the background color)
     if (isGeometryValid)
@@ -132,6 +140,8 @@ void SimpleDiffuseGIRayGen()
         {
             shootRay(payload);
             cameraPath[depth + 1] = PathVertex.create(payload.color, payload.posW, payload.N, payload.V, payload.dif, payload.spec, payload.rough, payload.isSpecular, payload.pdfForward, payload.pdfBackward);
+            // update G
+            cameraPath[depth + 1].G = evalGWithoutV(cameraPath[depth + 1], cameraPath[depth]);
         }
         
         randSeed = payload.rndSeed;
@@ -149,36 +159,41 @@ void SimpleDiffuseGIRayGen()
     // first vertex is the light sample
     lightPath[0].posW = lightOrigin;
     lightPath[0].color = lightIntensity;
+    lightPath[0].pdfForward = M_1_4_PI;
+    lightPath[0].pdfBackward = M_1_4_PI;
     
     RayPayload payload = initPayload(lightOrigin, lightDir, lightIntensity, randSeed);
-        
+
     for (uint depth = 0; depth < gMaxDepth && !payload.terminated; depth++)
     {
         shootRay(payload);
         lightPath[depth + 1] = PathVertex.create(payload.color, payload.posW, payload.N, payload.V, payload.dif, payload.spec, payload.rough, payload.isSpecular, payload.pdfForward, payload.pdfBackward);
         takeContribution[depth + 1] = !payload.terminated;
+        // update G
+        lightPath[depth + 1].G = evalGWithoutV(lightPath[depth + 1], lightPath[depth]);
     }
         
     randSeed = payload.rndSeed;
     
     // initialize MIS weight nodes, which is used to calculate contributions
-    MisNode misNodes[8];
-    for (uint i = 0; i < 8; i++)
+    MisNode misNodes[5];
+    for (uint i = 0; i < 5; i++)
     {
         misNodes[i] = MisNode.init();
     }
     
+    shadeColor = float3(0, 0, 0);
     // add path-tracing weighted contributions
     for (uint i = 0; i < gMaxDepth; i++)
     {
         shadeColor = cameraPath[i].color * ggxDirectWrapper(cameraPath[i + 1], randSeed);
-        //float weight = getMISWeight(cameraPath, lightPath, i + 2, 1, misNodes);
-        //shadeColor = saturate(shadeColor);
         bool colorsNan = any(isnan(shadeColor));
         gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
     }
     
+    
     // add light-tracing weighted contributions
+    shadeColor = float3(0, 0, 0);
     for (uint i = 0; i < gMaxDepth && takeContribution[i+1]; i++)
     {
         float3 lastHitPos = lightPath[i + 1].posW;
@@ -204,8 +219,6 @@ void SimpleDiffuseGIRayGen()
                     
                     // color = thp * brdf * G
                     shadeColor = (lightPath[i].color * connectToCamera(lightPath[i + 1])) * G;
-                    //float weight = getMISWeight(cameraPath, lightPath, 1, i + 2, misNodes);
-                    //shadeColor *= weight;
                     bool colorsNan = any(isnan(shadeColor));
                     gOutput[id] = saturate(gOutput[id] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
                 }
@@ -218,15 +231,26 @@ void SimpleDiffuseGIRayGen()
         }
     }
 
-    for (uint lightLength = 1; lightLength <= gMaxDepth; lightLength++)
+    shadeColor = float3(0, 0, 0);
+    for (uint totalLength = 4; totalLength <= gMaxDepth + 2; totalLength++)
     {
-        for (uint cameraLength = 1; cameraLength <= gMaxDepth; cameraLength++)
+        for (uint cameraLength = 2; cameraLength <= gMaxDepth; cameraLength++)
         {
-            shadeColor = getUnweightedContribution(cameraPath, lightPath, lightLength, cameraLength);
-            //float weight = getMISWeight(cameraPath, lightPath, lightLength, cameraLength, misNodes);
-            //shadeColor *= weight;
-            bool colorsNan = any(isnan(shadeColor));
-            gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+            uint lightLength = totalLength - cameraLength;
+            float G = evalGWithoutV(cameraPath[cameraLength - 1], lightPath[lightLength - 1]);
+            
+            float3 posA = cameraPath[cameraLength - 1].posW;
+            float3 posB = lightPath[lightLength - 1].posW;
+            float lengthAB = length(posB - posA);
+            float3 dirAB = (posB - posA) / lengthAB;
+            bool V = shadowRayVisibility(posA, dirAB, gMinT, lengthAB);
+    
+            if (V)
+            {
+                shadeColor = getUnweightedContribution(cameraPath, lightPath, cameraLength, lightLength, G);
+                bool colorsNan = any(isnan(shadeColor));
+                gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+            }
         }
     }
 

@@ -17,6 +17,8 @@ struct PathVertex
     
     float  pdfForward;
     float  pdfBackward;
+    
+    float  G;
 	
     static PathVertex init()
     {
@@ -31,6 +33,7 @@ struct PathVertex
         v.isSpecular = false;
         v.pdfForward = 0.0f;
         v.pdfBackward = 0.0f;
+        v.G = 0.0f;
         return v;
     }
 	
@@ -369,15 +372,15 @@ float evalGWithoutV(PathVertex a, PathVertex b)
     return cosA * cosB * invLengthAB * invLengthAB;
 }
 
-float3 getUnweightedContribution(PathVertex cameraPath[4], PathVertex lightPath[4], uint cameraIndex, uint lightIndex)
+float3 getUnweightedContribution(PathVertex cameraPath[4], PathVertex lightPath[4], uint cameraIndex, uint lightIndex, float G)
 {
 	// this function only computes unweighted contribution for path length > 1
-    if (cameraIndex < 1 || lightIndex < 1)
+    if (cameraIndex <= 1 || lightIndex <= 1)
         return float3(0, 0, 0);
 	
 	// get end vertex from each path
-    PathVertex cameraEndV = cameraPath[cameraIndex];
-    PathVertex lightEndV = lightPath[lightIndex];
+    PathVertex cameraEndV = cameraPath[cameraIndex - 1];
+    PathVertex lightEndV = lightPath[lightIndex - 1];
 	
 	// get throughput from the last vertex of each path
     float3 aE = cameraEndV.color;
@@ -389,145 +392,22 @@ float3 getUnweightedContribution(PathVertex cameraPath[4], PathVertex lightPath[
     float3 wi, wo;
     
 	// compute fsL
-    wi = connectDir;
-    wo = normalize(lightPath[lightIndex - 1].posW - lightEndV.posW); // towards light
+    wi = connectDir; // towards camera
+    wo = normalize(lightPath[lightIndex - 2].posW - lightEndV.posW); // towards light
     float3 fsL = evalGGXBRDF(wi, wo, lightEndV.posW, lightEndV.N, lightEndV.N, lightEndV.dif, lightEndV.spec, lightEndV.rough, lightEndV.isSpecular);
 
     if (all(fsL == 0))
         return fsL;
 	
 	// compute fsE
-    wi = -connectDir;
-    wo = normalize(cameraPath[cameraIndex - 1].posW - cameraEndV.posW); // towards camera
+    wi = -connectDir; // towards light
+    wo = normalize(cameraPath[cameraIndex - 2].posW - cameraEndV.posW); // towards camera
     float3 fsE = evalGGXBRDF(wi, wo, cameraEndV.posW, cameraEndV.N, cameraEndV.N, cameraEndV.dif, cameraEndV.spec, cameraEndV.rough, cameraEndV.isSpecular);
     
     if (all(fsE == 0))
         return fsE;
-	
-	// compute cst by fsL * G * fsE
-    float G = evalG(lightEndV, cameraEndV);
 
     float3 cst = fsL * G * fsE;
 	
     return aL * cst * aE;
-}
-
-float getMISWeight(PathVertex cameraPath[4], PathVertex lightPath[4], uint cameraIndex, uint lightIndex, MisNode misNodes[8])
-{
-    if (cameraIndex < 1 || lightIndex < 1)
-        return 0;
-    
-    PathVertex lightEndV = lightPath[lightIndex - 1];
-    PathVertex cameraEndV = cameraPath[cameraIndex - 1];
-    
-    float pdfLightEndForward, pdfLightEndBackward, pdfCameraEndForward, pdfCameraEndBackward;
-    
-    float3 pLightEnd = lightEndV.posW;
-    float3 nLightEnd = lightEndV.N;
-    float3 pCameraEnd = cameraEndV.posW;
-    float3 nCameraEnd = cameraEndV.N;
-    
-    float3 dLightToCamera = normalize(pCameraEnd - pLightEnd);
-    if (lightIndex == 1)
-    {
-        // TODO: change the probability to different light source type
-        float pdfW = M_1_4_PI;
-        pdfLightEndBackward = pdfW;
-        pdfLightEndForward = pdfW;
-    }
-    else
-    {
-        float3 dLightEndTowardsLight = normalize(lightPath[lightIndex - 2].posW - pLightEnd);
-        pdfLightEndForward = evalGGXPdf(dLightToCamera, dLightEndTowardsLight, lightEndV.posW, 
-                lightEndV.N, lightEndV.N, lightEndV.dif, lightEndV.spec, lightEndV.rough, lightEndV.isSpecular) / dot(dLightToCamera, nLightEnd);
-        
-        pdfLightEndBackward = evalGGXPdf(dLightEndTowardsLight, dLightToCamera, lightEndV.posW,
-                lightEndV.N, lightEndV.N, lightEndV.dif, lightEndV.spec, lightEndV.rough, lightEndV.isSpecular) / dot(dLightEndTowardsLight, nLightEnd);
-    }
-    
-    float3 dCameraToLight = -dLightToCamera;
-    if (cameraIndex == 1)
-    {
-        // TODO: change the probability to different camera model
-        float pdfW = 1.0f;
-        pdfCameraEndForward = pdfW / dot(nCameraEnd, dCameraToLight);
-        pdfCameraEndBackward = cameraEndV.pdfBackward;
-    }
-    else
-    {
-        float3 dCameraEndTowardsCamera = normalize(cameraPath[cameraIndex - 2].posW - pCameraEnd);
-        pdfCameraEndForward = evalGGXPdf(dCameraToLight, dCameraEndTowardsCamera, cameraEndV.posW,
-                cameraEndV.N, cameraEndV.N, cameraEndV.dif, cameraEndV.spec, cameraEndV.rough, cameraEndV.isSpecular) / dot(dCameraToLight, nCameraEnd);
-        pdfCameraEndBackward = evalGGXPdf(dCameraEndTowardsCamera, dCameraToLight, cameraEndV.posW,
-                cameraEndV.N, cameraEndV.N, cameraEndV.dif, cameraEndV.spec, cameraEndV.rough, cameraEndV.isSpecular) / dot(dCameraEndTowardsCamera, nCameraEnd);
-    }
-    
-    // construct misNodes
-    
-    int total = lightIndex + cameraIndex - 1;
-    for (uint i = 0; i < lightIndex - 1; ++i)
-    {
-        misNodes[i].pTowardLight = (i == 0) ? lightPath[0].pdfBackward : lightPath[i].pdfBackward * evalGWithoutV(lightPath[i], lightPath[i - 1]);
-        misNodes[i].pTowardCamera = lightPath[i].pdfForward * evalGWithoutV(lightPath[i + 1], lightPath[i]);
-        misNodes[i].isSpecular = false;
-    }
-    if (lightIndex > 0)
-    {
-        misNodes[lightIndex - 1].pTowardLight = (lightIndex == 1) ? pdfLightEndBackward : pdfLightEndBackward * evalGWithoutV(lightPath[lightIndex - 1], lightPath[lightIndex - 2]);
-        misNodes[lightIndex - 1].pTowardCamera = (lightIndex - 1 == total) ? pdfLightEndForward : pdfLightEndForward * evalGWithoutV(lightEndV, cameraEndV);
-        misNodes[lightIndex - 1].isSpecular = false;
-    }
-    
-    for (uint i = 0; i < cameraIndex - 1; ++i)
-    {
-        misNodes[total - i].pTowardCamera = (i == 0) ? cameraPath[0].pdfBackward : cameraPath[i].pdfBackward * evalGWithoutV(cameraPath[i], cameraPath[i - 1]);
-        misNodes[total - i].pTowardLight = cameraPath[i].pdfForward * evalGWithoutV(cameraPath[i + 1], cameraPath[i]);
-        misNodes[total - i].isSpecular = false;
-    }
-    if (cameraIndex > 0)
-    {
-        misNodes[total - lightIndex + 1].pTowardCamera = (cameraIndex == 1) ? pdfCameraEndBackward : pdfCameraEndBackward * evalGWithoutV(cameraPath[lightIndex - 1], cameraPath[lightIndex - 2]);
-        misNodes[total - lightIndex + 1].pTowardLight = (cameraIndex - 1 == total) ? pdfCameraEndForward : pdfCameraEndForward * evalGWithoutV(lightEndV, cameraEndV);
-        misNodes[total - lightIndex + 1].isSpecular = false;
-    }
-    
-    // iterate from the connection end point to calculate relative pdfA and add it to misWeightSum (power heuristic)
-    float pK = 1.0f;
-    float misWeightSum = 1.0f;
-    for (int i = lightIndex; i < total; ++i)
-    {
-        if (i == 0)
-        {
-            pK *= misNodes[0].pTowardLight / misNodes[1].pTowardLight;
-            if (misNodes[1].isSpecular)
-                continue;
-        }
-        else
-        {
-            pK *= misNodes[i - 1].pTowardCamera / misNodes[i + 1].pTowardLight;
-            if (misNodes[i].isSpecular || misNodes[i+1].isSpecular)
-                continue;
-        }
-    }
-    misWeightSum += pK * pK;
-    
-    pK = 1.0f;
-    for (int i = lightIndex; i > 0; --i)
-    {
-        if (i == (total + 1))
-        {
-            pK *= misNodes[total].pTowardCamera / misNodes[total - 1].pTowardCamera;
-            if (misNodes[total - 1].isSpecular)
-                continue;
-        }
-        else
-        {
-            pK *= misNodes[i].pTowardLight / misNodes[i - 2].pTowardCamera;
-            if (misNodes[i - 1].isSpecular || misNodes[i - 2].isSpecular)
-                continue;
-        }
-        misWeightSum += pK * pK;
-    }
-    
-    return 1.0f / misWeightSum;
 }
