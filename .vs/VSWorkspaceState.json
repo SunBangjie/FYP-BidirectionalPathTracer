@@ -1,0 +1,11 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\BidirectionalPathtracing",
+    "\\src\\BidirectionalPathtracing\\Data",
+    "\\src\\BidirectionalPathtracing\\Passes"
+  ],
+  "SelectedNode": "\\src\\BidirectionalPathtracing\\Passes\\BDPTPass.h",
+  "PreviewInSolutionExplorer": false
+}

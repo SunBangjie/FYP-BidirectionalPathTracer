@@ -23,8 +23,7 @@
     <ClCompile Include="..\SharedUtils\ResourceManager.cpp" />
     <ClCompile Include="..\SharedUtils\SceneLoaderWrapper.cpp" />
     <ClCompile Include="..\SharedUtils\SimpleVars.cpp" />
-    <ClCompile Include="Passes\LightTracing.cpp" />
-    <ClCompile Include="Passes\PathTracing.cpp" />
+    <ClCompile Include="Passes\BDPTPass.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -40,21 +39,7 @@
     <ClInclude Include="..\SharedUtils\ResourceManager.h" />
     <ClInclude Include="..\SharedUtils\SceneLoaderWrapper.h" />
     <ClInclude Include="..\SharedUtils\SimpleVars.h" />
-    <ClInclude Include="Passes\LightTracing.h" />
-    <ClInclude Include="Passes\PathTracing.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Data\Tutorial14\lightTracing.rt.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Data\Tutorial14\lightTracingUtils.hlsli" />
-    <None Include="Data\Tutorial14\lightRay.hlsli" />
-    <None Include="Data\Tutorial14\microfacetBRDFUtils.hlsli" />
-    <None Include="Data\Tutorial14\pathTracingRay.hlsli" />
-    <None Include="Data\Tutorial14\pathTracingUtils.hlsli" />
-    <None Include="Data\Tutorial14\standardShadowRay.hlsli" />
+    <ClInclude Include="Passes\BDPTPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Falcor\Framework\FalcorSharedObjects\FalcorSharedObjects.vcxproj">
@@ -63,6 +48,17 @@
     <ProjectReference Include="..\Falcor\Framework\Source\Falcor.vcxproj">
       <Project>{3b602f0e-3834-4f73-b97d-7dfc91597a98}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\BDPTMain.rt.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\BDPTUtils.hlsli" />
+    <None Include="Data\globalIlluminationRay.hlsli" />
+    <None Include="Data\microfacetBRDFUtils.hlsli" />
+    <None Include="Data\standardShadowRay.hlsli" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{CA04966C-BFDE-4BE9-A66F-1DCC7CE60429}</ProjectGuid>

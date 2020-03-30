@@ -48,14 +48,11 @@
     <ClInclude Include="..\SharedUtils\RenderPass.h">
       <Filter>SharedUtils</Filter>
     </ClInclude>
-    <ClInclude Include="Passes\LightTracing.h">
-      <Filter>Passes</Filter>
-    </ClInclude>
-    <ClInclude Include="Passes\PathTracing.h">
-      <Filter>Passes</Filter>
-    </ClInclude>
     <ClInclude Include="..\CommonPasses\CopyToOutputPass.h">
       <Filter>CommonPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="Passes\BDPTPass.h">
+      <Filter>Passes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -92,37 +89,28 @@
     <ClCompile Include="..\SharedUtils\RenderPass.cpp">
       <Filter>SharedUtils</Filter>
     </ClCompile>
-    <ClCompile Include="Passes\LightTracing.cpp">
-      <Filter>Passes</Filter>
-    </ClCompile>
-    <ClCompile Include="Passes\PathTracing.cpp">
-      <Filter>Passes</Filter>
-    </ClCompile>
     <ClCompile Include="..\CommonPasses\CopyToOutputPass.cpp">
       <Filter>CommonPasses</Filter>
     </ClCompile>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Passes\BDPTPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Data\Tutorial14\standardShadowRay.hlsli">
+    <None Include="Data\BDPTUtils.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Data\Tutorial14\microfacetBRDFUtils.hlsli">
+    <None Include="Data\globalIlluminationRay.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Data\Tutorial14\lightTracing.rt.hlsl">
+    <None Include="Data\microfacetBRDFUtils.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Data\Tutorial14\lightTracingUtils.hlsli">
+    <None Include="Data\standardShadowRay.hlsli">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="Data\Tutorial14\lightRay.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Data\Tutorial14\pathTracingRay.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Data\Tutorial14\pathTracingUtils.hlsli">
+    <None Include="Data\BDPTMain.rt.hlsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
