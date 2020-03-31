@@ -128,8 +128,9 @@ void SimpleDiffuseGIRayGen()
     cameraPath[0].posW = gCamera.posW;
     cameraPath[0].N = gCamera.cameraW;
     cameraPath[0].color = float3(1.0f); // We = 1 for pinhole camera
-    cameraPath[0].pdfBackward = 1.0f;
-    cameraPath[0].pdfForward = 1.0f;
+    float pdfC = 1.0f / (launchDim.x * launchDim.y);
+    cameraPath[0].pdfBackward = pdfC;
+    cameraPath[0].pdfForward = pdfC;
     
 	// Do shading, if we have geoemtry here (otherwise, output the background color)
     if (isGeometryValid)
@@ -159,8 +160,9 @@ void SimpleDiffuseGIRayGen()
     // first vertex is the light sample
     lightPath[0].posW = lightOrigin;
     lightPath[0].color = lightIntensity;
-    lightPath[0].pdfForward = M_1_4_PI;
-    lightPath[0].pdfBackward = M_1_4_PI;
+    float pdfW = M_1_4_PI / gLightsCount;
+    lightPath[0].pdfForward = pdfW;
+    lightPath[0].pdfBackward = pdfW;
     
     RayPayload payload = initPayload(lightOrigin, lightDir, lightIntensity, randSeed);
 
@@ -175,18 +177,13 @@ void SimpleDiffuseGIRayGen()
         
     randSeed = payload.rndSeed;
     
-    // initialize MIS weight nodes, which is used to calculate contributions
-    MisNode misNodes[5];
-    for (uint i = 0; i < 5; i++)
-    {
-        misNodes[i] = MisNode.init();
-    }
-    
     shadeColor = float3(0, 0, 0);
     // add path-tracing weighted contributions
     for (uint i = 0; i < gMaxDepth; i++)
     {
         shadeColor = cameraPath[i].color * ggxDirectWrapper(cameraPath[i + 1], randSeed);
+        float weight = getWeight(cameraPath, lightPath, i + 2, 1);
+        shadeColor *= weight;
         bool colorsNan = any(isnan(shadeColor));
         gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
     }
@@ -219,6 +216,8 @@ void SimpleDiffuseGIRayGen()
                     
                     // color = thp * brdf * G
                     shadeColor = (lightPath[i].color * connectToCamera(lightPath[i + 1])) * G;
+                    float weight = getWeight(cameraPath, lightPath, 1, i + 2);
+                    shadeColor *= weight;
                     bool colorsNan = any(isnan(shadeColor));
                     gOutput[id] = saturate(gOutput[id] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
                 }
@@ -248,10 +247,11 @@ void SimpleDiffuseGIRayGen()
             if (V)
             {
                 shadeColor = getUnweightedContribution(cameraPath, lightPath, cameraLength, lightLength, G);
+                float weight = getWeight(cameraPath, lightPath, cameraLength, lightLength);
+                shadeColor *= weight;
                 bool colorsNan = any(isnan(shadeColor));
                 gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
             }
         }
     }
-
 }
