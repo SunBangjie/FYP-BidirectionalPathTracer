@@ -144,6 +144,51 @@ float3 evalGGXBRDF(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, f
     }
 }
 
+float3 sampleGGXBRDF(uint randSeed, float3 hit, float3 N, float3 noNormalN, float3 V, float3 dif, float3 spec, float rough, out float3 L, out float pdf, out bool isSpecular)
+{
+    // We have to decide whether we sample our diffuse or specular/ggx lobe.
+    float probDiffuse = probabilityToSampleDiffuse(dif, spec);
+    float chooseDiffuse = (nextRand(randSeed) < probDiffuse);
+
+	// We'll need NdotV for both diffuse and specular...
+    float NdotV = saturate(dot(N, V));
+
+	// If we randomly selected to sample our diffuse lobe...
+    if (chooseDiffuse)
+    {
+        // Shoot a randomly selected cosine-sampled diffuse ray.
+        L = getCosHemisphereSample(randSeed, N);
+		
+		// Check to make sure our randomly selected, normal mapped diffuse ray didn't go below the surface.
+        if (dot(noNormalN, L) <= 0.0f)
+        {
+            pdf = 0;
+            return float3(0, 0, 0);
+        }
+        
+        float NdotL = saturate(dot(N, L));
+        pdf = (NdotL * M_1_PI) * probDiffuse;
+        return dif / probDiffuse;
+    }
+	// Otherwise we randomly selected to sample our GGX lobe
+    else
+    {
+        float3 H = getGGXMicrofacet(randSeed, rough, N);
+        L = normalize(2.f * dot(V, H) * H - V);
+        if (dot(noNormalN, L) <= 0.0f)
+        {
+            pdf = 0;
+            return float3(0, 0, 0);
+        }
+        
+        float NdotL = saturate(dot(N, L));
+        float ggxProb;
+        float3 ggxTerm = ggxLighting(H, L, N, NdotL, NdotV, rough, spec, ggxProb);
+        pdf = ggxProb * (1.0f - probDiffuse);
+        return NdotL * ggxTerm / (ggxProb * (1.0f - probDiffuse));
+    }
+}
+
 float evalGGXPdf(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, float3 dif, float3 spec, float rough, bool isSpecular)
 {
     float probDiffuse = probabilityToSampleDiffuse(dif, spec);

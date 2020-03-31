@@ -43,7 +43,7 @@ bool BDPTPass::initialize(RenderContext* pRenderContext, ResourceManager::Shared
 	mpRays->addHitShader(kFileRayTrace, kEntryRayClosestHit, kEntryRayAnyHit);
 
 	// Now that we've passed all our shaders in, compile and (if available) setup the scene
-	mpRays->compileRayProgram(120u); // should use the minimum byte size
+	mpRays->compileRayProgram(116u); // should use the minimum byte size
 	mpRays->setMaxRecursionDepth(uint32_t(mMaxPossibleRayDepth));
 	if (mpScene) mpRays->setScene(mpScene);
     return true;

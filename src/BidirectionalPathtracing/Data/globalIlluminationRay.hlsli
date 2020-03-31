@@ -48,7 +48,6 @@ void handleIndirectRayHit(float3 hit, float3 N, float3 noNormalN, float3 V, floa
         float3 color = dif / probDiffuse;
         float NdotL = saturate(dot(N, L));
         float pdfForward = (NdotL * M_1_PI) * probDiffuse;
-        float pdfBackward = (NdotV * M_1_PI) * probDiffuse;
         updateRayData(rayData, color, hit, L, N, V, dif, spec, rough, false, pdfForward);
     }
 	// Otherwise we randomly selected to sample our GGX lobe
@@ -64,7 +63,6 @@ void handleIndirectRayHit(float3 hit, float3 N, float3 noNormalN, float3 V, floa
 
         float3 color = NdotL * ggxTerm / (ggxProb * (1.0f - probDiffuse));
         float pdfForward = ggxProb * (1.0f - probDiffuse);
-        float pdfBackward = pdfForward;
         updateRayData(rayData, color, hit, L, N, V, dif, spec, rough, true, pdfForward);
     }
 }

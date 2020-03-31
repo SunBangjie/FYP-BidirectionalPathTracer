@@ -89,11 +89,18 @@ void SimpleDiffuseGIRayGen()
     cameraPath[0].color = float3(1.0f); // We = 1 for pinhole camera
     cameraPath[0].pdfForward = 1.0f / (launchDim.x * launchDim.y); // the probability of shooting in the direction
     
+    // We can make use of the G-buffer to update the second vertex
+    float3 outDir;
+    float pdf;
+    bool isHitSpecular;
+    float3 hitThrouhput = sampleGGXBRDF(randSeed, worldPos.xyz, worldNorm.xyz, worldNorm.xyz, V, difMatlColor.xyz, specMatlColor.xyz, roughness, outDir, pdf, isHitSpecular);
+    cameraPath[1] = PathVertex.create(hitThrouhput, worldPos.xyz, worldNorm.xyz, V, difMatlColor.xyz, specMatlColor.xyz, roughness, isHitSpecular, pdf);
+    
     // Initialize ray payload
-    RayPayload payload = initPayload(gCamera.posW, -V, float3(1.0f), randSeed);
+    RayPayload payload = initPayload(worldPos.xyz, outDir, hitThrouhput, randSeed);
     
     // Start tracing from camera
-    for (uint depth = 0; depth < gMaxDepth && !payload.terminated; depth++)
+    for (uint depth = 1; depth < gMaxDepth && !payload.terminated; depth++)
     {
         shootRay(payload);
         cameraPath[depth + 1] = PathVertex.create(payload.color, payload.posW, payload.N, payload.V, 
