@@ -58,6 +58,11 @@ float3 connectToCamera(PathVertex v)
     return evalGGXBRDF(v.V, normalize(gCamera.posW - v.posW), v.posW, v.N, v.N, v.dif, v.spec, v.rough, v.isSpecular);
 }
 
+float3 clampVec(float3 v)
+{
+    return float3(clamp(v.x, 0, 0.5), clamp(v.y, 0, 0.5), clamp(v.z, 0, 0.5));
+}
+
 // Our material has have both a diffuse and a specular lobe.  
 //     With what probability should we sample the diffuse one?
 float probabilityToSampleDiffuse(float3 difColor, float3 specColor)
@@ -398,70 +403,4 @@ float3 getUnweightedContribution(PathVertex cameraPath[4], PathVertex lightPath[
     float3 cst = fsL * G * fsE;
 	
     return aL * cst * aE;
-}
-
-float getWeight(PathVertex cameraPath[4], PathVertex lightPath[4], uint cameraIndex, uint lightIndex)
-{
-    // path length 3 -> 1,2 + 2,1
-    if (cameraIndex + lightIndex == 3)
-    {
-        float p12 = cameraPath[0].pdfForward * lightPath[0].pdfForward * lightPath[1].pdfForward * evalGWithoutV(cameraPath[0], lightPath[1]);
-        float p21 = 1.0f - p12;
-        
-        if (cameraIndex == 1)
-        {
-            return 1.0f / (p21 * p21 / (p12 * p12) + 1.0f);
-        }
-        else
-        {
-            return 1.0f / (p12 * p12 / (p21 * p21) + 1.0f);
-        }
-    }
-    
-    // path length 4 -> 1,3 + 2,2 + 3,1
-    else if (cameraIndex + lightIndex == 4)
-    {
-        float p13 = cameraPath[0].pdfForward * lightPath[0].pdfForward * lightPath[1].pdfForward * lightPath[2].pdfForward * evalGWithoutV(cameraPath[0], lightPath[2]);
-        float p22 = lightPath[0].pdfForward * lightPath[1].pdfForward * cameraPath[0].pdfForward * cameraPath[1].pdfForward * evalGWithoutV(cameraPath[1], lightPath[1]);
-        float p31 = 1.0f - p13 - p22;
-        if (cameraIndex == 1)
-        {
-            float pj = p13 * p13;
-            return 1.0f / ((p31 * p31 + p22 * p22) / pj + 1.0f);
-        }
-        else if (lightIndex == 1)
-        {
-            float pj = p31 * p31;
-            return 1.0f / ((p13 * p13 + p22 * p22) / pj + 1.0f);
-        }
-        else
-        {
-            float pj = p22 * p22;
-            return 1.0f / ((p13 * p13 + p31 * p31) / pj + 1.0f);
-        }
-    }
-    
-    // path length 5 -> 1,4 + 2,3 + 3,2 + 4,1
-    else
-    {
-        float p23 = lightPath[0].pdfForward * lightPath[1].pdfForward * lightPath[2].pdfForward * cameraPath[0].pdfForward * cameraPath[1].pdfForward * evalGWithoutV(cameraPath[1], lightPath[2]);
-        float p32 = lightPath[0].pdfForward * lightPath[1].pdfForward * cameraPath[0].pdfForward * cameraPath[1].pdfForward * cameraPath[2].pdfForward * evalGWithoutV(cameraPath[2], lightPath[1]);
-        float p14 = cameraPath[0].pdfForward * lightPath[0].pdfForward * lightPath[1].pdfForward * lightPath[2].pdfForward * lightPath[3].pdfForward * evalGWithoutV(cameraPath[0], lightPath[3]);
-        float p41 = 1.0f - p23 - p32 - p14;
-        if (cameraIndex == 1)
-        {
-            float pj = p14 * p14;
-            return 1.0f / ((p41 * p41 + p23 * p23 + p32 * p32) / pj + 1.0f);
-        }
-        else if (lightIndex == 1)
-        {
-            float pj = p41 * p41;
-            return 1.0f / ((p14 * p14 + p23 * p23 + p32 * p32) / pj + 1.0f);
-        }
-        else if (lightIndex == 2)
-        {
-            float pj = p32 * p32;
-            return 1.0f / ((p14 * p14 + p41 * p41 + p23 * p23) / pj + 1.0f);
-        }
-    }
 }

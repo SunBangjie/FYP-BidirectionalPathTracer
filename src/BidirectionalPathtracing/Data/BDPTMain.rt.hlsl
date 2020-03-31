@@ -144,10 +144,9 @@ void SimpleDiffuseGIRayGen()
     for (uint i = 0; i < gMaxDepth; i++)
     {
         shadeColor = cameraPath[i].color * ggxDirectWrapper(cameraPath[i + 1], randSeed);
-        float weight = getWeight(cameraPath, lightPath, i + 2, 1);
-        shadeColor *= weight;
+        shadeColor = clampVec(shadeColor / (i + 2));
         bool colorsNan = any(isnan(shadeColor));
-        //gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+        gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
     }
     
     // add light-tracing weighted contributions
@@ -178,8 +177,7 @@ void SimpleDiffuseGIRayGen()
                     
                     // color = thp * brdf * G
                     shadeColor = (lightPath[i].color * connectToCamera(lightPath[i + 1])) * G;
-                    float weight = getWeight(cameraPath, lightPath, 1, i + 2);
-                    shadeColor *= weight;
+                    shadeColor = clampVec(shadeColor / (i + 2));
                     bool colorsNan = any(isnan(shadeColor));
                     gOutput[id] = saturate(gOutput[id] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
                 }
@@ -210,11 +208,11 @@ void SimpleDiffuseGIRayGen()
             if (V)
             {
                 shadeColor = getUnweightedContribution(cameraPath, lightPath, cameraLength, lightLength, G);
-                float weight = getWeight(cameraPath, lightPath, cameraLength, lightLength);
-                shadeColor *= weight;
+                shadeColor = clampVec(shadeColor / (totalLength - 1));
                 bool colorsNan = any(isnan(shadeColor));
-                //gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+                gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
             }
         }
     }
 }
+
