@@ -1,99 +1,3 @@
-// Define 1/pi
-#define M_1_PI  0.318309886183790671538
-#define M_1_4_PI  0.07957747154
-
-struct PathVertex
-{
-    float3 color;
-	
-    float3 posW;
-    float3 N;
-    float3 V;
-	
-    float3 dif;
-    float3 spec;
-    float  rough;
-    bool   isSpecular;
-    
-    float  pdfForward;
-	
-    static PathVertex init()
-    {
-        PathVertex v;
-        v.color = float3(0, 0, 0);
-        v.posW = float3(0, 0, 0);
-        v.N = float3(0, 0, 0);
-        v.V = float3(0, 0, 0);
-        v.dif = float3(0, 0, 0);
-        v.spec = float3(0, 0, 0);
-        v.rough = 0.0f;
-        v.isSpecular = false;
-        v.pdfForward = 0.0f;
-        return v;
-    }
-	
-    static PathVertex create(float3 color, float3 posW, float3 N, float3 V, float3 dif, float3 spec, float rough, bool isSpecular, float pdfForward)
-    {
-        PathVertex v;
-        v.color = color;
-        v.posW = posW;
-        v.N = N;
-        v.V = V;
-        v.dif = dif;
-        v.spec = spec;
-        v.rough = rough;
-        v.isSpecular = isSpecular;
-        v.pdfForward = pdfForward;
-        return v;
-    }
-};
-
-float3 ggxDirectWrapper(PathVertex v, inout uint rndSeed)
-{
-    return ggxDirect(rndSeed, v.posW, v.N, v.V, v.dif, v.spec, v.rough);
-}
-
-float3 connectToCamera(PathVertex v)
-{
-    return evalGGXBRDF(v.V, normalize(gCamera.posW - v.posW), v.posW, v.N, v.N, v.dif, v.spec, v.rough, v.isSpecular);
-}
-
-float3 clampVec(float3 v)
-{
-    return float3(clamp(v.x, 0, 0.5), clamp(v.y, 0, 0.5), clamp(v.z, 0, 0.5));
-}
-
-// Our material has have both a diffuse and a specular lobe.  
-//     With what probability should we sample the diffuse one?
-float probabilityToSampleDiffuse(float3 difColor, float3 specColor)
-{
-    float lumDiffuse = max(0.01f, luminance(difColor.rgb));
-    float lumSpecular = max(0.01f, luminance(specColor.rgb));
-    return lumDiffuse / (lumDiffuse + lumSpecular);
-}
-
-// A helper to extract important light data from internal Falcor data structures.  What's going on isn't particularly
-//     important -- any framework you use will expose internal scene data in some way.  Use your framework's utilities.
-void getLightData(in int index, in float3 hitPos, out float3 toLight, out float3 lightIntensity, out float distToLight)
-{
-	// Use built-in Falcor functions and data structures to fill in a LightSample data structure
-	//   -> See "Lights.slang" for it's definition
-    LightSample ls;
-
-	// Is it a directional light?
-    if (gLights[index].type == LightDirectional)
-        ls = evalDirectionalLight(gLights[index], hitPos);
-
-	// No?  Must be a point light.
-    else
-        ls = evalPointLight(gLights[index], hitPos);
-
-	// Convert the LightSample structure into simpler data
-    toLight = normalize(ls.L);
-    lightIntensity = ls.diffuse;
-    distToLight = length(ls.posW - hitPos);
-}
-
 // This is a modification of the default Falcor routine in Shading.slang
 ShadingData simplePrepareShadingData(VertexOut v, MaterialData m, float3 camPosW)
 {
@@ -154,17 +58,6 @@ ShadingData getHitShadingData(BuiltInTriangleIntersectionAttributes attribs, flo
 	// Run a pair of Falcor helper functions to compute important data at the current hit point
 	VertexOut  vsOut = getVertexAttributes(PrimitiveIndex(), attribs);
 	return simplePrepareShadingData(vsOut, gMaterial, cameraPos);
-}
-
-// Utility function to get a vector perpendicular to an input vector 
-//    (from "Efficient Construction of Perpendicular Vectors Without Branching")
-float3 getPerpendicularVector(float3 u)
-{
-	float3 a = abs(u);
-	uint xm = ((a.x - a.y)<0 && (a.x - a.z)<0) ? 1 : 0;
-	uint ym = (a.y - a.z)<0 ? (1 ^ xm) : 0;
-	uint zm = 1 ^ (xm | ym);
-	return cross(u, float3(xm, ym, zm));
 }
 
 // A work-around function because some DXR drivers seem to have broken atan2() implementations
@@ -233,31 +126,6 @@ bool alphaTestFails(BuiltInTriangleIntersectionAttributes attribs)
 	return (baseColor.a < gMaterial.alphaThreshold);
 }
 
-// Get a cosine-weighted random vector centered around a specified normal direction.
-float3 getCosHemisphereSample(inout uint randSeed, float3 hitNorm)
-{
-	// Get 2 random numbers to select our sample with
-    float2 randVal = float2(nextRand(randSeed), nextRand(randSeed));
-
-	// Cosine weighted hemisphere sample from RNG
-    float3 bitangent = getPerpendicularVector(hitNorm);
-    float3 tangent = cross(bitangent, hitNorm);
-    float r = sqrt(randVal.x);
-    float phi = 2.0f * 3.14159265f * randVal.y;
-
-	// Get our cosine-weighted hemisphere lobe sample direction
-    return tangent * (r * cos(phi).x) + bitangent * (r * sin(phi)) + hitNorm.xyz * sqrt(max(0.0, 1.0f - randVal.x));
-}
-
-float3 sampleUnitSphere(inout uint rndSeed)
-{
-	// rejection sampling
-    float3 p = float3(2.0f, 2.0f, 2.0f);
-    while (length(p) > 1.0f)
-        p = float3(nextRand(rndSeed) * 2.0f - 1.0f, nextRand(rndSeed) * 2.0f - 1.0f, nextRand(rndSeed) * 2.0f - 1.0f);
-    return p;
-}
-
 uint2 getLaunchIndexFromDirection(float3 dir, uint2 dim, float2 jitter)
 {
     float d1 = dot(dir, gCamera.cameraU) / dot(gCamera.cameraU, gCamera.cameraU);
@@ -281,56 +149,6 @@ void sampleLight(inout uint rndSeed, out float3 origin, out float3 dir, out floa
     else
         dir = sampleUnitSphere(rndSeed);
     dir = getCosHemisphereSample(rndSeed, dir);
-}
-
-float3 evalGGXBRDF(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, float3 dif, float3 spec, float rough, bool isSpecular)
-{
-    // check wi and wo, if wo is the reflected vector of wi, then we take specular
-    if (!isSpecular)
-    {
-        // Check to make sure our randomly selected, normal mapped diffuse ray didn't go below the surface.
-        if (dot(noNormalN, L) <= 0.0f)
-            return float3(0.0f);
-    
-        return dif * M_1_PI;
-    }
-    else
-    {
-        float3 H = normalize(L + V);
-        if (dot(noNormalN, L) <= 0.0f)
-            return float3(0, 0, 0);
-        float NdotL = saturate(dot(N, L));
-        float NdotV = saturate(dot(N, V));
-        float ggxProb;
-        return ggxLighting(H, L, N, NdotL, NdotV, rough, spec, ggxProb);
-    }
-}
-
-float evalGGXPdf(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, float3 dif, float3 spec, float rough, bool isSpecular)
-{
-    float probDiffuse = probabilityToSampleDiffuse(dif, spec);
-    
-    if (!isSpecular)
-    {
-        // Check to make sure our randomly selected, normal mapped diffuse ray didn't go below the surface.
-        if (dot(noNormalN, L) <= 0.0f)
-            return 0.0f;
-        
-        float NdotL = saturate(dot(N, L));
-        return (NdotL * M_1_PI) * probDiffuse;
-    }
-    else
-    {
-        float3 H = normalize(L + V);
-        if (dot(noNormalN, L) <= 0.0f)
-            return 0.f;
-        float NdotL = saturate(dot(N, L));
-        float NdotV = saturate(dot(N, V));
-        float ggxProb;
-        ggxLighting(H, L, N, NdotL, NdotV, rough, spec, ggxProb);
-        
-        return ggxProb * (1.0f - probDiffuse);
-    }
 }
 
 float evalG(PathVertex a, PathVertex b)

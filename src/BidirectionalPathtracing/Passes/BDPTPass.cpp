@@ -60,10 +60,8 @@ void BDPTPass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
 	dirty |= (int)pGui->addIntVar("Max RayDepth", mUserSpecifiedRayDepth, 0, mMaxPossibleRayDepth);
-	dirty |= (int)pGui->addCheckBox(mDoDirectGI ? "Compute direct illumination" : "Skipping direct illumination",
-									mDoDirectGI);
-	dirty |= (int)pGui->addCheckBox(mDoIndirectGI ? "Shooting global illumination rays" : "Skipping global illumination", 
-		                            mDoIndirectGI);
+	//dirty |= (int)pGui->addCheckBox(mDoDirectGI ? "Compute direct illumination" : "Skipping direct illumination", mDoDirectGI);
+	//dirty |= (int)pGui->addCheckBox(mDoIndirectGI ? "Shooting global illumination rays" : "Skipping global illumination", mDoIndirectGI);
 	if (dirty) setRefreshFlag();
 }
 
@@ -80,8 +78,6 @@ void BDPTPass::execute(RenderContext* pRenderContext)
 	auto globalVars = mpRays->getGlobalVars();
 	globalVars["GlobalCB"]["gMinT"]         = mpResManager->getMinTDist();
 	globalVars["GlobalCB"]["gFrameCount"]   = mFrameCount++;
-	globalVars["GlobalCB"]["gDoIndirectGI"] = mDoIndirectGI;
-	globalVars["GlobalCB"]["gDirectGI"]     = mDoDirectGI;
 	globalVars["GlobalCB"]["gMaxDepth"]     = mUserSpecifiedRayDepth;
     globalVars["GlobalCB"]["gEmitMult"]     = 1.0f;
 	globalVars["gPos"] = mpResManager->getTexture("WorldPosition");

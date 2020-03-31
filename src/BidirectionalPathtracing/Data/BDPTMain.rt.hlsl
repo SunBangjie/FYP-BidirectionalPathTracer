@@ -13,8 +13,6 @@ shared cbuffer GlobalCB
 {
 	float gMinT;           // Min distance to start a ray to avoid self-occlusion
 	uint  gFrameCount;     // An integer changing every frame to update the random number
-    bool  gDoDirectGI;
-	bool  gDoIndirectGI;   // A boolean determining if we should shoot indirect GI rays
 	uint  gMaxDepth;       // Maximum number of recursive bounces to allow
     float gEmitMult;       // Multiply emissive amount by this factor (set to 1, usually)
     float2 gPixelJitter;   // Camera jitter
@@ -30,8 +28,10 @@ shared Texture2D<float4> gEnvMap;
 shared Texture2D<float4> gEmissive;
 shared RWTexture2D<float4> gOutput;
 
-#include "BDPTUtils.hlsli"
+#include "RayPathData.hlsli"
 #include "microfacetBRDFUtils.hlsli"
+#include "MaterialUtils.hlsli"
+#include "BDPTUtils.hlsli"
 #include "standardShadowRay.hlsli"
 #include "globalIlluminationRay.hlsli"
 

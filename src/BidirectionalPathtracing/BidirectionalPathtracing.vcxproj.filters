@@ -13,6 +13,15 @@
     <Filter Include="CommonPasses">
       <UniqueIdentifier>{c3250be7-9aac-4acc-b735-f3b94915b932}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\BMFR">
+      <UniqueIdentifier>{c83874ce-3b1f-404f-97fa-da5970797d66}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\BDPT">
+      <UniqueIdentifier>{73a5b809-7ec4-49b0-a509-5fe21caab734}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Materials">
+      <UniqueIdentifier>{51075c7d-779f-43d6-8e8d-528f0b689d1c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\SharedUtils\RenderingPipeline.h">
@@ -104,32 +113,38 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Data\BDPTUtils.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Data\globalIlluminationRay.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Data\microfacetBRDFUtils.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Data\standardShadowRay.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Data\BDPTMain.rt.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Data\regressionCP.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="Data\preprocess.ps.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="Data\bmfrDenoise.ps.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Shaders\BMFR</Filter>
     </None>
     <None Include="Data\postprocess.ps.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Shaders\BMFR</Filter>
+    </None>
+    <None Include="Data\preprocess.ps.hlsl">
+      <Filter>Shaders\BMFR</Filter>
+    </None>
+    <None Include="Data\regressionCP.hlsl">
+      <Filter>Shaders\BMFR</Filter>
+    </None>
+    <None Include="Data\BDPTMain.rt.hlsl">
+      <Filter>Shaders\BDPT</Filter>
+    </None>
+    <None Include="Data\BDPTUtils.hlsli">
+      <Filter>Shaders\BDPT</Filter>
+    </None>
+    <None Include="Data\globalIlluminationRay.hlsli">
+      <Filter>Shaders\BDPT</Filter>
+    </None>
+    <None Include="Data\standardShadowRay.hlsli">
+      <Filter>Shaders\BDPT</Filter>
+    </None>
+    <None Include="Data\MaterialUtils.hlsli">
+      <Filter>Shaders\Materials</Filter>
+    </None>
+    <None Include="Data\microfacetBRDFUtils.hlsli">
+      <Filter>Shaders\Materials</Filter>
+    </None>
+    <None Include="Data\RayPathData.hlsli">
+      <Filter>Shaders\BDPT</Filter>
     </None>
   </ItemGroup>
 </Project>

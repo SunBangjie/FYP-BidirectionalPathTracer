@@ -13,7 +13,7 @@ public:
 
 protected:
 	BDPTPass(const std::string &outChannel) : mOutputTextureName(outChannel),
-		::RenderPass("Light Tracing", "Light Tracing Options") {}
+		::RenderPass("Bidirectional Pathtracer", "BDPT Options") {}
 
     // Implementation of RenderPass interface
     bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;
@@ -28,10 +28,6 @@ protected:
     // Rendering state
 	RayLaunch::SharedPtr    mpRays;                       ///< Our wrapper around a DX Raytracing pass
     RtScene::SharedPtr      mpScene;                      ///< Our scene file (passed in from app)  
-
-	// Recursive ray tracing can be slow.  Add a toggle to disable, to allow you to manipulate the scene
-	bool                    mDoIndirectGI = true;
-	bool                    mDoDirectGI = true;
 
 	int32_t                 mUserSpecifiedRayDepth = 2;   ///<  What is the current maximum ray depth
 	const int32_t           mMaxPossibleRayDepth = 3;     ///<  The largest ray depth we support (without recompile)
