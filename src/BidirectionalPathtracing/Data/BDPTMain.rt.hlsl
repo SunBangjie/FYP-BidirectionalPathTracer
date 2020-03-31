@@ -35,41 +35,11 @@ shared RWTexture2D<float4> gOutput;
 #include "standardShadowRay.hlsli"
 #include "globalIlluminationRay.hlsli"
 
-RayPayload initPayload(float3 rayOrigin, float3 rayDir, float3 color, uint randSeed)
-{
-    RayPayload payload;
-    payload.rayOrigin = rayOrigin;
-    payload.rayDir = rayDir;
-    payload.rndSeed = randSeed;
-    payload.color = color;
-    payload.posW = rayOrigin;
-    payload.N = float3(0.0f);
-    payload.V = float3(0.0f);
-    payload.dif = float3(0.0f);
-    payload.spec = float3(0.0f);
-    payload.rough = 0.0;
-    payload.isSpecular = false;
-    payload.pdfForward = 0.0;
-    payload.pdfBackward = 0.0;
-    payload.terminated = false;
-    return payload;
-}
-
-float3 ggxDirectWrapper(PathVertex v, inout uint rndSeed)
-{
-    return ggxDirect(rndSeed, v.posW, v.N, v.V, v.dif, v.spec, v.rough);
-}
-
-float3 connectToCamera(PathVertex v)
-{
-    return evalGGXBRDF(v.V, normalize(gCamera.posW - v.posW), v.posW, v.N, v.N, v.dif, v.spec, v.rough, v.isSpecular);
-}
-
 // How do we shade our g-buffer and spawn indirect and shadow rays?
 [shader("raygeneration")]
 void SimpleDiffuseGIRayGen()
 {
-	// Where is this ray on screen?
+    // get pixel index
 	uint2 launchIndex    = DispatchRaysIndex().xy;
 	uint2 launchDim      = DispatchRaysDimensions().xy;
     
@@ -85,6 +55,7 @@ void SimpleDiffuseGIRayGen()
     // Does this g-buffer pixel contain a valid piece of geometry?  (0 in pos.w for invalid)
     bool isGeometryValid = (worldPos.w != 0.0f);
     
+    // Optimization: skip if hit background
     if (!isGeometryValid)
     {
         gOutput[launchIndex] = float4(difMatlColor.rgb, 1.0f);
@@ -94,17 +65,6 @@ void SimpleDiffuseGIRayGen()
 	// Extract and compute some material and geometric parameters
     float roughness = specMatlColor.a * specMatlColor.a;
     float3 V = normalize(gCamera.posW - worldPos.xyz);
-
-	// Make sure our normal is pointed the right direction
-    if (dot(worldNorm.xyz, V) <= 0.0f)
-        worldNorm.xyz = -worldNorm.xyz;
-    float NdotV = dot(worldNorm.xyz, V);
-    float3 noMapN = normalize(extraData.yzw);
-    if (dot(noMapN, V) <= 0.0f)
-        noMapN = -noMapN;
-
-	// If we don't hit any geometry, our difuse material contains our background color.
-    float3 shadeColor = isGeometryValid ? float3(0, 0, 0) : difMatlColor.rgb;
     
     // Initialize random seed
     uint randSeed = initRand(launchIndex.x + launchIndex.y * launchDim.x, gFrameCount, 16);
@@ -124,35 +84,32 @@ void SimpleDiffuseGIRayGen()
 	 */
     
 	// The first vertex is the camera
-    cameraPath[0] = PathVertex.init();
     cameraPath[0].posW = gCamera.posW;
-    cameraPath[0].N = gCamera.cameraW;
+    cameraPath[0].N = normalize(gCamera.cameraW);
     cameraPath[0].color = float3(1.0f); // We = 1 for pinhole camera
-    float pdfC = 1.0f / (launchDim.x * launchDim.y);
-    cameraPath[0].pdfBackward = pdfC;
-    cameraPath[0].pdfForward = pdfC;
+    cameraPath[0].pdfForward = 1.0f / (launchDim.x * launchDim.y); // the probability of shooting in the direction
     
-	// Do shading, if we have geoemtry here (otherwise, output the background color)
-    if (isGeometryValid)
-    {	
-        RayPayload payload = initPayload(gCamera.posW, -V, float3(1.0f), randSeed);
-        
-        for (uint depth = 0; depth < gMaxDepth && !payload.terminated; depth++)
-        {
-            shootRay(payload);
-            cameraPath[depth + 1] = PathVertex.create(payload.color, payload.posW, payload.N, payload.V, payload.dif, payload.spec, payload.rough, payload.isSpecular, payload.pdfForward, payload.pdfBackward);
-            // update G
-            cameraPath[depth + 1].G = evalGWithoutV(cameraPath[depth + 1], cameraPath[depth]);
-        }
-        
-        randSeed = payload.rndSeed;
+    // Initialize ray payload
+    RayPayload payload = initPayload(gCamera.posW, -V, float3(1.0f), randSeed);
+    
+    // Start tracing from camera
+    for (uint depth = 0; depth < gMaxDepth && !payload.terminated; depth++)
+    {
+        shootRay(payload);
+        cameraPath[depth + 1] = PathVertex.create(payload.color, payload.posW, payload.N, payload.V, 
+                                                  payload.dif, payload.spec, payload.rough, 
+                                                  payload.isSpecular, payload.pdfForward);
     }
+    
+    // Carry forward the random seed
+    randSeed = payload.rndSeed;
     
     /**
 	 ** Construct light path by shooting rays from the light source
 	 ** TODO: Now assume point light source is used, but we can extend it to area and directional light
 	 */
     
+    // Sample light position and light direction
     float3 lightOrigin, lightDir, lightIntensity;
     sampleLight(randSeed, lightOrigin, lightDir, lightIntensity);
     bool takeContribution[4] = { true, true, true, true };
@@ -160,34 +117,38 @@ void SimpleDiffuseGIRayGen()
     // first vertex is the light sample
     lightPath[0].posW = lightOrigin;
     lightPath[0].color = lightIntensity;
-    float pdfW = M_1_4_PI / gLightsCount;
-    lightPath[0].pdfForward = pdfW;
-    lightPath[0].pdfBackward = pdfW;
+    lightPath[0].pdfForward = 1.0f / gLightsCount;
     
-    RayPayload payload = initPayload(lightOrigin, lightDir, lightIntensity, randSeed);
+    // initialize light ray payload
+    RayPayload lightRayPayload = initPayload(lightOrigin, lightDir, lightIntensity, randSeed);
 
-    for (uint depth = 0; depth < gMaxDepth && !payload.terminated; depth++)
+    // Start tracing from light sample
+    for (uint depth = 0; depth < gMaxDepth && !lightRayPayload.terminated; depth++)
     {
-        shootRay(payload);
-        lightPath[depth + 1] = PathVertex.create(payload.color, payload.posW, payload.N, payload.V, payload.dif, payload.spec, payload.rough, payload.isSpecular, payload.pdfForward, payload.pdfBackward);
-        takeContribution[depth + 1] = !payload.terminated;
-        // update G
-        lightPath[depth + 1].G = evalGWithoutV(lightPath[depth + 1], lightPath[depth]);
+        shootRay(lightRayPayload);
+        lightPath[depth + 1] = PathVertex.create(lightRayPayload.color, lightRayPayload.posW, lightRayPayload.N, lightRayPayload.V, 
+                                                 lightRayPayload.dif, lightRayPayload.spec, lightRayPayload.rough, 
+                                                 lightRayPayload.isSpecular, lightRayPayload.pdfForward);
+        takeContribution[depth + 1] = !lightRayPayload.terminated;
     }
-        
-    randSeed = payload.rndSeed;
     
-    shadeColor = float3(0, 0, 0);
-    // add path-tracing weighted contributions
+    // Carry forward the random seed
+    randSeed = lightRayPayload.rndSeed;
+    
+    // Add weighted contributions to the frame
+    
+    // Initialize shadeColor
+    float3 shadeColor = float3(0, 0, 0);
+    
+    // Add path-tracing weighted contributions
     for (uint i = 0; i < gMaxDepth; i++)
     {
         shadeColor = cameraPath[i].color * ggxDirectWrapper(cameraPath[i + 1], randSeed);
         float weight = getWeight(cameraPath, lightPath, i + 2, 1);
         shadeColor *= weight;
         bool colorsNan = any(isnan(shadeColor));
-        gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+        //gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
     }
-    
     
     // add light-tracing weighted contributions
     shadeColor = float3(0, 0, 0);
@@ -195,11 +156,12 @@ void SimpleDiffuseGIRayGen()
     {
         float3 lastHitPos = lightPath[i + 1].posW;
         float3 lastHitN = lightPath[i + 1].N;
-
+        
+        float3 cameraN = normalize(gCamera.cameraW);
         float3 dirToCamera = normalize(gCamera.posW - lastHitPos);
         float disToCamera = length(gCamera.posW - lastHitPos);
 
-        if (dot(gCamera.cameraW, dirToCamera) < 0 && takeContribution[i+1])
+        if (dot(cameraN, dirToCamera) < 0 && takeContribution[i+1])
         {
             // test visibility towards camera
             bool vis = shadowRayVisibility(lastHitPos, dirToCamera, gMinT, disToCamera);
@@ -209,7 +171,7 @@ void SimpleDiffuseGIRayGen()
                 if (gMaxDepth > 0)
                 {
                     // calculate G
-                    float theta1 = saturate(abs(dot(dirToCamera, gCamera.cameraW)));
+                    float theta1 = saturate(abs(dot(dirToCamera, cameraN)));
                     float theta2 = saturate(abs(dot(dirToCamera, lastHitN)));
                     float invDisToCamera = 1.0 / disToCamera;
                     float G = theta1 * theta2 * invDisToCamera * invDisToCamera;
@@ -230,6 +192,7 @@ void SimpleDiffuseGIRayGen()
         }
     }
 
+    // add connections of camera and light path vertices
     shadeColor = float3(0, 0, 0);
     for (uint totalLength = 4; totalLength <= gMaxDepth + 2; totalLength++)
     {
@@ -243,14 +206,14 @@ void SimpleDiffuseGIRayGen()
             float lengthAB = length(posB - posA);
             float3 dirAB = (posB - posA) / lengthAB;
             bool V = shadowRayVisibility(posA, dirAB, gMinT, lengthAB);
-    
+            
             if (V)
             {
                 shadeColor = getUnweightedContribution(cameraPath, lightPath, cameraLength, lightLength, G);
                 float weight = getWeight(cameraPath, lightPath, cameraLength, lightLength);
                 shadeColor *= weight;
                 bool colorsNan = any(isnan(shadeColor));
-                gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+                //gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
             }
         }
     }

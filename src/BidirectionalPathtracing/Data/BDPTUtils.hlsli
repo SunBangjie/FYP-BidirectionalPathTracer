@@ -16,9 +16,6 @@ struct PathVertex
     bool   isSpecular;
     
     float  pdfForward;
-    float  pdfBackward;
-    
-    float  G;
 	
     static PathVertex init()
     {
@@ -32,12 +29,10 @@ struct PathVertex
         v.rough = 0.0f;
         v.isSpecular = false;
         v.pdfForward = 0.0f;
-        v.pdfBackward = 0.0f;
-        v.G = 0.0f;
         return v;
     }
 	
-    static PathVertex create(float3 color, float3 posW, float3 N, float3 V, float3 dif, float3 spec, float rough, bool isSpecular, float pdfForward, float pdfBackward)
+    static PathVertex create(float3 color, float3 posW, float3 N, float3 V, float3 dif, float3 spec, float rough, bool isSpecular, float pdfForward)
     {
         PathVertex v;
         v.color = color;
@@ -49,26 +44,19 @@ struct PathVertex
         v.rough = rough;
         v.isSpecular = isSpecular;
         v.pdfForward = pdfForward;
-        v.pdfBackward = pdfBackward;
         return v;
     }
 };
 
-struct MisNode
+float3 ggxDirectWrapper(PathVertex v, inout uint rndSeed)
 {
-    float pTowardCamera;
-    float pTowardLight;
-    bool  isSpecular;
-    
-    static MisNode init()
-    {
-        MisNode n;
-        n.pTowardCamera = 0.0;
-        n.pTowardLight = 0.0;
-        n.isSpecular = false;
-        return n;
-    }
-};
+    return ggxDirect(rndSeed, v.posW, v.N, v.V, v.dif, v.spec, v.rough);
+}
+
+float3 connectToCamera(PathVertex v)
+{
+    return evalGGXBRDF(v.V, normalize(gCamera.posW - v.posW), v.posW, v.N, v.N, v.dif, v.spec, v.rough, v.isSpecular);
+}
 
 // Our material has have both a diffuse and a specular lobe.  
 //     With what probability should we sample the diffuse one?

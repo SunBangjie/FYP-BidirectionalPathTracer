@@ -13,13 +13,31 @@ struct RayPayload
     bool isSpecular;
     
     float pdfForward;
-    float pdfBackward;
     
     float3 rayOrigin;
     float3 rayDir;
     
     bool terminated;
 };
+
+RayPayload initPayload(float3 rayOrigin, float3 rayDir, float3 color, uint randSeed)
+{
+    RayPayload payload;
+    payload.rayOrigin = rayOrigin;
+    payload.rayDir = rayDir;
+    payload.rndSeed = randSeed;
+    payload.color = color;
+    payload.posW = rayOrigin;
+    payload.N = float3(0.0f);
+    payload.V = float3(0.0f);
+    payload.dif = float3(0.0f);
+    payload.spec = float3(0.0f);
+    payload.rough = 0.0;
+    payload.isSpecular = false;
+    payload.pdfForward = 0.0;
+    payload.terminated = false;
+    return payload;
+}
 
 void shootRay(inout RayPayload payload)
 {
@@ -86,7 +104,7 @@ float3 ggxDirect(inout uint rndSeed, float3 hit, float3 N, float3 V, float3 dif,
     return shadowMult * lightIntensity * ( /* NdotL * */ggxTerm + NdotL * dif / M_PI);
 }
 
-void updateRayData(inout RayPayload rayData, float3 color, float3 hit, float3 L, float3 N, float3 V, float3 dif, float3 spec, float rough, bool isSpecular, float pdfF, float pdfB)
+void updateRayData(inout RayPayload rayData, float3 color, float3 hit, float3 L, float3 N, float3 V, float3 dif, float3 spec, float rough, bool isSpecular, float pdfF)
 {
     // update brdf
     rayData.color *= color;
@@ -108,7 +126,6 @@ void updateRayData(inout RayPayload rayData, float3 color, float3 hit, float3 L,
     
     // update pdf
     rayData.pdfForward = pdfF;
-    rayData.pdfBackward = pdfB;
 }
 
 void handleIndirectRayHit(float3 hit, float3 N, float3 noNormalN, float3 V, float3 dif, float3 spec, float rough, inout RayPayload rayData)
@@ -134,7 +151,7 @@ void handleIndirectRayHit(float3 hit, float3 N, float3 noNormalN, float3 V, floa
         float NdotL = saturate(dot(N, L));
         float pdfForward = (NdotL * M_1_PI) * probDiffuse;
         float pdfBackward = (NdotV * M_1_PI) * probDiffuse;
-        updateRayData(rayData, color, hit, L, N, V, dif, spec, rough, false, pdfForward, pdfBackward);
+        updateRayData(rayData, color, hit, L, N, V, dif, spec, rough, false, pdfForward);
     }
 	// Otherwise we randomly selected to sample our GGX lobe
     else
@@ -150,7 +167,7 @@ void handleIndirectRayHit(float3 hit, float3 N, float3 noNormalN, float3 V, floa
         float3 color = NdotL * ggxTerm / (ggxProb * (1.0f - probDiffuse));
         float pdfForward = ggxProb * (1.0f - probDiffuse);
         float pdfBackward = pdfForward;
-        updateRayData(rayData, color, hit, L, N, V, dif, spec, rough, true, pdfForward, pdfBackward);
+        updateRayData(rayData, color, hit, L, N, V, dif, spec, rough, true, pdfForward);
     }
 }
 
