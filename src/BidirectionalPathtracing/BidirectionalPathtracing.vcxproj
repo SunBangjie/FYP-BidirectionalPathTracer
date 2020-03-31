@@ -25,6 +25,7 @@
     <ClCompile Include="..\SharedUtils\SimpleVars.cpp" />
     <ClCompile Include="Passes\BDPTPass.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Passes\DenoisePass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\CommonPasses\CopyToOutputPass.h" />
@@ -40,6 +41,7 @@
     <ClInclude Include="..\SharedUtils\SceneLoaderWrapper.h" />
     <ClInclude Include="..\SharedUtils\SimpleVars.h" />
     <ClInclude Include="Passes\BDPTPass.h" />
+    <ClInclude Include="Passes\DenoisePass.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Falcor\Framework\FalcorSharedObjects\FalcorSharedObjects.vcxproj">
@@ -59,6 +61,20 @@
     <None Include="Data\globalIlluminationRay.hlsli" />
     <None Include="Data\microfacetBRDFUtils.hlsli" />
     <None Include="Data\standardShadowRay.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\bmfrDenoise.ps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Data\postprocess.ps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Data\preprocess.ps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="Data\regressionCP.hlsl">
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{CA04966C-BFDE-4BE9-A66F-1DCC7CE60429}</ProjectGuid>

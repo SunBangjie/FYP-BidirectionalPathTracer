@@ -54,6 +54,9 @@
     <ClInclude Include="Passes\BDPTPass.h">
       <Filter>Passes</Filter>
     </ClInclude>
+    <ClInclude Include="Passes\DenoisePass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\SharedUtils\RenderingPipeline.cpp">
@@ -96,6 +99,9 @@
     <ClCompile Include="Passes\BDPTPass.cpp">
       <Filter>Passes</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\DenoisePass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Data\BDPTUtils.hlsli">
@@ -111,6 +117,18 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="Data\BDPTMain.rt.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Data\regressionCP.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Data\preprocess.ps.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Data\bmfrDenoise.ps.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Data\postprocess.ps.hlsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

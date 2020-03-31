@@ -2,8 +2,7 @@
 #include "../SharedUtils/RenderingPipeline.h"
 #include "../CommonPasses/LightProbeGBufferPass.h"
 #include "Passes/BDPTPass.h"
-#include "../CommonPasses/SimpleAccumulationPass.h"
-#include "../CommonPasses/SimpleToneMappingPass.h"
+#include "Passes/DenoisePass.h"
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
@@ -12,9 +11,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
 	// Add passes into our pipeline
 	pipeline->setPass(0, LightProbeGBufferPass::create());
-	pipeline->setPass(1, BDPTPass::create("LightTracingOutput"));
-	pipeline->setPass(2, SimpleAccumulationPass::create("LightTracingOutput"));
-	pipeline->setPass(3, SimpleToneMappingPass::create("LightTracingOutput", ResourceManager::kOutputChannel));
+	pipeline->setPass(1, BDPTPass::create(ResourceManager::kOutputChannel));
+	pipeline->setPass(2, BlockwiseMultiOrderFeatureRegression::create(ResourceManager::kOutputChannel));
    
 	// Define a set of config / window parameters for our program
     SampleConfig config;
