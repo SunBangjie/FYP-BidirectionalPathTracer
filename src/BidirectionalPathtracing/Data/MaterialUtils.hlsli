@@ -2,19 +2,19 @@
 #define M_1_PI  0.318309886183790671538
 #define M_1_4_PI  0.07957747154
 
-float3 ggxDirectWrapper(PathVertex v, inout uint rndSeed)
+float3 evalDirectWrapper(PathVertex v, inout uint rndSeed)
 {
-    return ggxDirect(rndSeed, v.posW, v.N, v.V, v.dif, v.spec, v.rough);
+    return evalDirect(rndSeed, v.posW, v.N, v.V, v.dif, v.spec, v.rough);
 }
 
 float3 connectToCamera(PathVertex v)
 {
-    return evalGGXBRDF(v.V, normalize(gCamera.posW - v.posW), v.posW, v.N, v.N, v.dif, v.spec, v.rough, v.isSpecular);
+    return evalBRDF(v.V, normalize(gCamera.posW - v.posW), v.posW, v.N, v.N, v.dif, v.spec, v.rough, v.isSpecular);
 }
 
 float3 clampVec(float3 v)
 {
-    return float3(clamp(v.x, 0, 0.5), clamp(v.y, 0, 0.5), clamp(v.z, 0, 0.5));
+    return float3(clamp(v.x, 0, gClampUpper), clamp(v.y, 0, gClampUpper), clamp(v.z, 0, gClampUpper));
 }
 
 // Our material has have both a diffuse and a specular lobe.  
@@ -84,6 +84,67 @@ void getLightData(in int index, in float3 hitPos, out float3 toLight, out float3
     distToLight = length(ls.posW - hitPos);
 }
 
+/* general API for Material lighting models
+ * evalDirect - evaluate direct lighting
+ * evalBRDF - evaluate BRDF
+ * evalPdf - evaluate pdf
+ * sampleBRDF - sample direction L, evaluate BRDF, also output the pdf and if the specular lope is sampled
+*/
+float3 evalDirect(inout uint rndSeed, float3 hit, float3 N, float3 V, float3 dif, float3 spec, float rough)
+{
+    if (gMatIndex == 0)
+    {
+        return ggxDirect(rndSeed, hit, N, V, dif, spec, rough);
+    }
+    else
+    {
+        return lambertianDirect(rndSeed, hit, N, dif);
+    }
+}
+
+float3 evalBRDF(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, float3 dif, float3 spec, float rough, bool isSpecular)
+{
+    if (gMatIndex == 0)
+    {
+        return evalGGXBRDF(V, L, hit, N, noNormalN, dif, spec, rough, isSpecular);
+    }
+    else
+    {
+        return evalLambertianBRDF(hit, N, L, dif);
+    }
+}
+
+float3 evalPdf(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, float3 dif, float3 spec, float rough, bool isSpecular)
+{
+    if (gMatIndex == 0)
+    {
+        return evalGGXPdf(V, L, hit, N, noNormalN, dif, spec, rough, isSpecular);
+    }
+    else
+    {
+        return evalLambertianPdf(N, L);
+    }
+}
+
+float3 sampleBRDF(uint randSeed, float3 hit, float3 N, float3 noNormalN, float3 V, float3 dif, float3 spec, float rough, out float3 L, out float pdf, out bool isSpecular)
+{
+    if (gMatIndex == 0)
+    {
+        return sampleGGXBRDF(randSeed, hit, N, noNormalN, V, dif, spec, rough, L, pdf, isSpecular);
+    }
+    else
+    {
+        isSpecular = false;
+        return sampleLambertianBRDF(randSeed, hit, N, dif, L, pdf);
+    }
+}
+
+/* GGX Lighting Model
+ * ggxDirect - evaluate direct lighting
+ * evalGGXBRDF - evaluate BRDF
+ * evalGGXPdf - evaluate pdf
+ * sampleGGXBRDF - sample direction L, evaluate BRDF, also output the pdf and if the specular lope is sampled
+*/
 float3 ggxDirect(inout uint rndSeed, float3 hit, float3 N, float3 V, float3 dif, float3 spec, float rough)
 {
 	// Pick a random light from our scene to shoot a shadow ray towards
@@ -216,6 +277,13 @@ float evalGGXPdf(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, flo
     }
 }
 
+
+/* Lambertian Lighting Model
+ * lambertianDirect - evaluate direct lighting
+ * evalLambertianBRDF - evaluate BRDF
+ * evalLambertianPdf - evaluate pdf
+ * sampleLambertianBRDF - sample direction L, evaluate BRDF, also output the pdf and if the specular lope is sampled
+*/
 float3 lambertianDirect(inout uint rndSeed, float3 hit, float3 norm, float3 difColor)
 {
 	// Pick a random light from our scene to shoot a shadow ray towards
@@ -237,18 +305,24 @@ float3 lambertianDirect(inout uint rndSeed, float3 hit, float3 norm, float3 difC
     return shadowMult * LdotN * lightIntensity * difColor / M_PI;
 }
 
-float3 lambertianBRDF(inout uint rndSeed, float3 hit, float3 norm, float3 difColor, out float3 L)
+float3 evalLambertianBRDF(float3 hit, float3 norm, float3 L, float3 difColor)
 {
-	// Shoot a randomly selected cosine-sampled diffuse ray.
-    L = getCosHemisphereSample(rndSeed, norm);
-
 	// Accumulate the color: (NdotL * incomingLight * difColor / pi) 
 	// Probability of sampling:  (NdotL / pi)
     return difColor;
 }
 
-float lambertianPdf(float3 N, float3 L)
+float evalLambertianPdf(float3 N, float3 L)
 {
     return saturate(dot(N, L) * M_1_PI);
 }
 
+float3 sampleLambertianBRDF(inout uint rndSeed, float3 hit, float3 norm, float3 difColor, out float3 L, out float pdf)
+{
+	// Shoot a randomly selected cosine-sampled diffuse ray.
+    L = getCosHemisphereSample(rndSeed, norm);
+    pdf = saturate(dot(norm, L)) * M_1_PI;
+	// Accumulate the color: (NdotL * incomingLight * difColor / pi) 
+	// Probability of sampling:  (NdotL / pi)
+    return difColor;
+}

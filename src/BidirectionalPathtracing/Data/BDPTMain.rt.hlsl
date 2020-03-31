@@ -13,8 +13,10 @@ shared cbuffer GlobalCB
 {
 	float gMinT;           // Min distance to start a ray to avoid self-occlusion
 	uint  gFrameCount;     // An integer changing every frame to update the random number
+    uint  gMatIndex;       // The index of material brdf to use
 	uint  gMaxDepth;       // Maximum number of recursive bounces to allow
     float gEmitMult;       // Multiply emissive amount by this factor (set to 1, usually)
+    float gClampUpper;     // Clamping upper bound
     float2 gPixelJitter;   // Camera jitter
 }
 
@@ -93,7 +95,7 @@ void SimpleDiffuseGIRayGen()
     float3 outDir;
     float pdf;
     bool isHitSpecular;
-    float3 hitThrouhput = sampleGGXBRDF(randSeed, worldPos.xyz, worldNorm.xyz, worldNorm.xyz, V, difMatlColor.xyz, specMatlColor.xyz, roughness, outDir, pdf, isHitSpecular);
+    float3 hitThrouhput = sampleBRDF(randSeed, worldPos.xyz, worldNorm.xyz, worldNorm.xyz, V, difMatlColor.xyz, specMatlColor.xyz, roughness, outDir, pdf, isHitSpecular);
     cameraPath[1] = PathVertex.create(hitThrouhput, worldPos.xyz, worldNorm.xyz, V, difMatlColor.xyz, specMatlColor.xyz, roughness, isHitSpecular, pdf);
     
     // Initialize ray payload
@@ -150,7 +152,7 @@ void SimpleDiffuseGIRayGen()
     // Add path-tracing weighted contributions
     for (uint i = 0; i < gMaxDepth; i++)
     {
-        shadeColor = cameraPath[i].color * ggxDirectWrapper(cameraPath[i + 1], randSeed);
+        shadeColor = cameraPath[i].color * evalDirectWrapper(cameraPath[i + 1], randSeed);
         shadeColor = clampVec(shadeColor / (i + 2));
         bool colorsNan = any(isnan(shadeColor));
         gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));

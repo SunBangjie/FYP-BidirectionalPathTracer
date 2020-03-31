@@ -32,6 +32,11 @@ protected:
 	int32_t                 mUserSpecifiedRayDepth = 2;   ///<  What is the current maximum ray depth
 	const int32_t           mMaxPossibleRayDepth = 3;     ///<  The largest ray depth we support (without recompile)
 
+	int32_t                 mMaterialIndex = 0;           ///<  What material to use?
+	const int32_t           mNumOfMaterials = 2;          ///<  Total number of materials supported
+
+	float                   mClampUpper = 0.9;            ///<  Upper bound of the clamping of contributions
+
 	// What texture should was ask the resource manager to store our result in?
 	std::string             mOutputTextureName;
     

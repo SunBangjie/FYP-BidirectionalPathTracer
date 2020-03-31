@@ -6,6 +6,6 @@
     "\\src\\BidirectionalPathtracing\\Data",
     "\\src\\BidirectionalPathtracing\\Passes"
   ],
-  "SelectedNode": "\\src\\BidirectionalPathtracing\\Passes\\BDPTPass.h",
+  "SelectedNode": "\\src\\BidirectionalPathtracing\\Passes",
   "PreviewInSolutionExplorer": false
 }

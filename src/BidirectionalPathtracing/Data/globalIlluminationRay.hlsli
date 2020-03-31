@@ -28,43 +28,11 @@ void RayAnyHit(inout RayPayload rayData, BuiltInTriangleIntersectionAttributes a
 
 void handleIndirectRayHit(float3 hit, float3 N, float3 noNormalN, float3 V, float3 dif, float3 spec, float rough, inout RayPayload rayData)
 {
-	// We have to decide whether we sample our diffuse or specular/ggx lobe.
-    float probDiffuse = probabilityToSampleDiffuse(dif, spec);
-    float chooseDiffuse = (nextRand(rayData.rndSeed) < probDiffuse);
-
-	// We'll need NdotV for both diffuse and specular...
-    float NdotV = saturate(dot(N, V));
-
-	// If we randomly selected to sample our diffuse lobe...
-    if (chooseDiffuse)
-    {
-        // Shoot a randomly selected cosine-sampled diffuse ray.
-        float3 L = getCosHemisphereSample(rayData.rndSeed, N);
-		
-		// Check to make sure our randomly selected, normal mapped diffuse ray didn't go below the surface.
-        if (dot(noNormalN, L) <= 0.0f)
-            return;
-        
-        float3 color = dif / probDiffuse;
-        float NdotL = saturate(dot(N, L));
-        float pdfForward = (NdotL * M_1_PI) * probDiffuse;
-        updateRayData(rayData, color, hit, L, N, V, dif, spec, rough, false, pdfForward);
-    }
-	// Otherwise we randomly selected to sample our GGX lobe
-    else
-    {
-        float3 H = getGGXMicrofacet(rayData.rndSeed, rough, N);
-        float3 L = normalize(2.f * dot(V, H) * H - V);
-        if (dot(noNormalN, L) <= 0.0f)
-            return;
-        float NdotL = saturate(dot(N, L));
-        float ggxProb;
-        float3 ggxTerm = ggxLighting(H, L, N, NdotL, NdotV, rough, spec, ggxProb);
-
-        float3 color = NdotL * ggxTerm / (ggxProb * (1.0f - probDiffuse));
-        float pdfForward = ggxProb * (1.0f - probDiffuse);
-        updateRayData(rayData, color, hit, L, N, V, dif, spec, rough, true, pdfForward);
-    }
+    float3 L;
+    float pdf;
+    bool isSpecular;
+    float3 color = sampleBRDF(rayData.rndSeed, hit, N, noNormalN, V, dif, spec, rough, L, pdf, isSpecular);
+    updateRayData(rayData, color, hit, L, N, V, dif, spec, rough, isSpecular, pdf);
 }
 
 [shader("closesthit")]

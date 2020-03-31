@@ -194,8 +194,8 @@ float3 getUnweightedContribution(PathVertex cameraPath[4], PathVertex lightPath[
     PathVertex lightEndV = lightPath[lightIndex - 1];
 	
 	// get throughput from the last vertex of each path
-    float3 aE = cameraEndV.color;
-    float3 aL = lightEndV.color;
+    float3 aE = cameraPath[cameraIndex - 2].color;
+    float3 aL = lightPath[cameraIndex - 2].color;
 	
 	// connect two end vertices
     float3 connectDir = normalize(cameraEndV.posW - lightEndV.posW); // from light to camera
@@ -205,7 +205,7 @@ float3 getUnweightedContribution(PathVertex cameraPath[4], PathVertex lightPath[
 	// compute fsL
     wi = connectDir; // towards camera
     wo = normalize(lightPath[lightIndex - 2].posW - lightEndV.posW); // towards light
-    float3 fsL = evalGGXBRDF(wi, wo, lightEndV.posW, lightEndV.N, lightEndV.N, lightEndV.dif, lightEndV.spec, lightEndV.rough, lightEndV.isSpecular);
+    float3 fsL = evalBRDF(wi, wo, lightEndV.posW, lightEndV.N, lightEndV.N, lightEndV.dif, lightEndV.spec, lightEndV.rough, lightEndV.isSpecular);
 
     if (all(fsL == 0))
         return fsL;
@@ -213,7 +213,7 @@ float3 getUnweightedContribution(PathVertex cameraPath[4], PathVertex lightPath[
 	// compute fsE
     wi = -connectDir; // towards light
     wo = normalize(cameraPath[cameraIndex - 2].posW - cameraEndV.posW); // towards camera
-    float3 fsE = evalGGXBRDF(wi, wo, cameraEndV.posW, cameraEndV.N, cameraEndV.N, cameraEndV.dif, cameraEndV.spec, cameraEndV.rough, cameraEndV.isSpecular);
+    float3 fsE = evalBRDF(wi, wo, cameraEndV.posW, cameraEndV.N, cameraEndV.N, cameraEndV.dif, cameraEndV.spec, cameraEndV.rough, cameraEndV.isSpecular);
     
     if (all(fsE == 0))
         return fsE;

@@ -59,9 +59,9 @@ void BDPTPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
 void BDPTPass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
-	dirty |= (int)pGui->addIntVar("Max RayDepth", mUserSpecifiedRayDepth, 0, mMaxPossibleRayDepth);
-	//dirty |= (int)pGui->addCheckBox(mDoDirectGI ? "Compute direct illumination" : "Skipping direct illumination", mDoDirectGI);
-	//dirty |= (int)pGui->addCheckBox(mDoIndirectGI ? "Shooting global illumination rays" : "Skipping global illumination", mDoIndirectGI);
+	dirty |= (int)pGui->addIntVar("Max Ray Depth", mUserSpecifiedRayDepth, 0, mMaxPossibleRayDepth);
+	dirty |= (int)pGui->addIntVar("Material", mMaterialIndex, 0, mNumOfMaterials);
+	dirty |= pGui->addFloatVar("Clamping Upper Bound", mClampUpper, 0.001, 1.0);
 	if (dirty) setRefreshFlag();
 }
 
@@ -80,6 +80,8 @@ void BDPTPass::execute(RenderContext* pRenderContext)
 	globalVars["GlobalCB"]["gFrameCount"]   = mFrameCount++;
 	globalVars["GlobalCB"]["gMaxDepth"]     = mUserSpecifiedRayDepth;
     globalVars["GlobalCB"]["gEmitMult"]     = 1.0f;
+	globalVars["GlobalCB"]["gMatIndex"]     = mMaterialIndex;
+	globalVars["GlobalCB"]["gClampUpper"]   = mClampUpper;
 	globalVars["gPos"] = mpResManager->getTexture("WorldPosition");
 	globalVars["gNorm"] = mpResManager->getTexture("WorldNormal");
 	globalVars["gDiffuseMatl"] = mpResManager->getTexture("MaterialDiffuse");
