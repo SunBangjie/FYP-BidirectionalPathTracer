@@ -62,6 +62,7 @@ void BDPTPass::renderGui(Gui* pGui)
 	dirty |= (int)pGui->addIntVar("Max Ray Depth", mUserSpecifiedRayDepth, 0, mMaxPossibleRayDepth);
 	dirty |= (int)pGui->addIntVar("Material", mMaterialIndex, 0, mNumOfMaterials);
 	dirty |= pGui->addFloatVar("Clamping Upper Bound", mClampUpper, 0.001, 1.0);
+	dirty |= pGui->addFloatVar("Refractive Index (only for dielectric material)", mRefractiveIndex, 0.1, 5.0);
 	if (dirty) setRefreshFlag();
 }
 
@@ -82,6 +83,7 @@ void BDPTPass::execute(RenderContext* pRenderContext)
     globalVars["GlobalCB"]["gEmitMult"]     = 1.0f;
 	globalVars["GlobalCB"]["gMatIndex"]     = mMaterialIndex;
 	globalVars["GlobalCB"]["gClampUpper"]   = mClampUpper;
+	globalVars["GlobalCB"]["gRefractiveIndex"] = mRefractiveIndex;
 	globalVars["gPos"] = mpResManager->getTexture("WorldPosition");
 	globalVars["gNorm"] = mpResManager->getTexture("WorldNormal");
 	globalVars["gDiffuseMatl"] = mpResManager->getTexture("MaterialDiffuse");

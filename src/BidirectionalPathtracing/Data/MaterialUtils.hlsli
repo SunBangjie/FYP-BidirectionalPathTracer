@@ -96,9 +96,13 @@ float3 evalDirect(inout uint rndSeed, float3 hit, float3 N, float3 V, float3 dif
     {
         return ggxDirect(rndSeed, hit, N, V, dif, spec, rough);
     }
-    else
+    else if (gMatIndex == 1)
     {
         return lambertianDirect(rndSeed, hit, N, dif);
+    }
+    else
+    {
+        return dielectricDirect(rndSeed, hit, N, V, dif, spec, rough);
     }
 }
 
@@ -108,9 +112,13 @@ float3 evalBRDF(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, floa
     {
         return evalGGXBRDF(V, L, hit, N, noNormalN, dif, spec, rough, isSpecular);
     }
-    else
+    else if (gMatIndex == 1)
     {
         return evalLambertianBRDF(hit, N, L, dif);
+    }
+    else
+    {
+        return evalDielectricBRDF();
     }
 }
 
@@ -120,9 +128,13 @@ float3 evalPdf(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, float
     {
         return evalGGXPdf(V, L, hit, N, noNormalN, dif, spec, rough, isSpecular);
     }
-    else
+    else if (gMatIndex == 1)
     {
         return evalLambertianPdf(N, L);
+    }
+    else
+    {
+        return evalDielectricPdf();
     }
 }
 
@@ -132,14 +144,19 @@ float3 sampleBRDF(uint randSeed, float3 hit, float3 N, float3 noNormalN, float3 
     {
         return sampleGGXBRDF(randSeed, hit, N, noNormalN, V, dif, spec, rough, L, pdf, isSpecular);
     }
-    else
+    else if (gMatIndex == 1)
     {
         isSpecular = false;
         return sampleLambertianBRDF(randSeed, hit, N, dif, L, pdf);
     }
+    else
+    {
+        isSpecular = true;
+        return sampleDielectricBRDF(randSeed, hit, N, noNormalN, V, dif, spec, rough, L, pdf);
+    }
 }
 
-/* GGX Lighting Model
+/* GGX Material Model
  * ggxDirect - evaluate direct lighting
  * evalGGXBRDF - evaluate BRDF
  * evalGGXPdf - evaluate pdf
@@ -278,7 +295,7 @@ float evalGGXPdf(float3 V, float3 L, float3 hit, float3 N, float3 noNormalN, flo
 }
 
 
-/* Lambertian Lighting Model
+/* Lambertian Material Model
  * lambertianDirect - evaluate direct lighting
  * evalLambertianBRDF - evaluate BRDF
  * evalLambertianPdf - evaluate pdf
@@ -325,4 +342,63 @@ float3 sampleLambertianBRDF(inout uint rndSeed, float3 hit, float3 norm, float3 
 	// Accumulate the color: (NdotL * incomingLight * difColor / pi) 
 	// Probability of sampling:  (NdotL / pi)
     return difColor;
+}
+
+/* Dielectric Material Model
+ * dielectricDirect - evaluate direct lighting
+ * evalDielectricBRDF - evaluate BRDF
+ * evalDielectricPdf - evaluate pdf
+ * sampleDielectricBRDF - sample direction L, evaluate BRDF, also output the pdf and if the specular lope is sampled
+*/
+
+// direct illumination will be purely specular
+float3 dielectricDirect(inout uint rndSeed, float3 hit, float3 N, float3 V, float3 dif, float3 spec, float rough)
+{
+    if (all(spec > 0.0))
+    {
+        return float3(0, 0, 0);
+    }
+    else
+    {
+        return lambertianDirect(rndSeed, hit, N, dif);
+    }
+}
+
+float3 evalDielectricBRDF()
+{
+    return float3(0, 0, 0);
+}
+
+float evalDielectricPdf()
+{
+    return 0.0f;
+}
+
+float3 sampleDielectricBRDF(uint randSeed, float3 hit, float3 N, float3 noNormalN, float3 V, float3 dif, float3 spec, float rough, out float3 L, out float pdf)
+{
+    float3 wReflect;
+    float3 wRefract;
+    
+    float etai = gRefractiveIndex;
+    float etat = 1.0f / etai;
+    
+    float reflect = specularReflect(N, V, etai, etat, wReflect);
+    float refract = specularRefract(N, V, etai, etat, wRefract);
+    
+    // use fresnel factor to do importance sampling
+    float fresnel = reflect * abs(dot(wReflect, N));
+    bool chooseReflect = (nextRand(randSeed) < fresnel);
+    
+    if (chooseReflect)
+    {
+        L = wReflect;
+        pdf = fresnel;
+        return spec * reflect;
+    }
+    else
+    {
+        L = wRefract;
+        pdf = 1.0f - fresnel;
+        return dif * refract;
+    }
 }

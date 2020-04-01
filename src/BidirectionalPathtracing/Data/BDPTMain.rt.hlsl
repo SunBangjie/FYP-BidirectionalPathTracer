@@ -14,6 +14,7 @@ shared cbuffer GlobalCB
 	float gMinT;           // Min distance to start a ray to avoid self-occlusion
 	uint  gFrameCount;     // An integer changing every frame to update the random number
     uint  gMatIndex;       // The index of material brdf to use
+    float gRefractiveIndex; // The refractive index of dielectric materials
 	uint  gMaxDepth;       // Maximum number of recursive bounces to allow
     float gEmitMult;       // Multiply emissive amount by this factor (set to 1, usually)
     float gClampUpper;     // Clamping upper bound

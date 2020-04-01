@@ -36,7 +36,7 @@ protected:
 	const int32_t           mNumOfMaterials = 2;          ///<  Total number of materials supported
 
 	float                   mClampUpper = 0.9;            ///<  Upper bound of the clamping of contributions
-
+	float                   mRefractiveIndex = 1.0;       ///<  RefractiveIndex of dielectric materials
 	// What texture should was ask the resource manager to store our result in?
 	std::string             mOutputTextureName;
     
