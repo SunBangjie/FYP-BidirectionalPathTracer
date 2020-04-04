@@ -140,11 +140,11 @@
     <None Include="Data\MaterialUtils.hlsli">
       <Filter>Shaders\Materials</Filter>
     </None>
-    <None Include="Data\microfacetBRDFUtils.hlsli">
-      <Filter>Shaders\Materials</Filter>
-    </None>
     <None Include="Data\RayPathData.hlsli">
       <Filter>Shaders\BDPT</Filter>
+    </None>
+    <None Include="Data\BRDFUtils.hlsli">
+      <Filter>Shaders\Materials</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -2,10 +2,7 @@
   "ExpandedNodes": [
     "",
     "\\src",
-    "\\src\\BidirectionalPathtracing",
-    "\\src\\BidirectionalPathtracing\\Data",
-    "\\src\\BidirectionalPathtracing\\Passes"
+    "\\src\\Falcor"
   ],
-  "SelectedNode": "\\src\\BidirectionalPathtracing\\Passes",
   "PreviewInSolutionExplorer": false
 }

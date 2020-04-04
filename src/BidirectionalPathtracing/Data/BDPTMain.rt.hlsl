@@ -32,7 +32,7 @@ shared Texture2D<float4> gEmissive;
 shared RWTexture2D<float4> gOutput;
 
 #include "RayPathData.hlsli"
-#include "microfacetBRDFUtils.hlsli"
+#include "BRDFUtils.hlsli"
 #include "MaterialUtils.hlsli"
 #include "BDPTUtils.hlsli"
 #include "standardShadowRay.hlsli"
@@ -73,9 +73,9 @@ void SimpleDiffuseGIRayGen()
     uint randSeed = initRand(launchIndex.x + launchIndex.y * launchDim.x, gFrameCount, 16);
 	
     // Initialize camera and light paths
-    PathVertex cameraPath[4];
-    PathVertex lightPath[4];
-    for (uint i = 0; i < 4; i++)
+    PathVertex cameraPath[9];
+    PathVertex lightPath[9];
+    for (uint i = 0; i < 9; i++)
     {
         cameraPath[i] = PathVertex.init();
         lightPath[i] = PathVertex.init();
@@ -122,7 +122,9 @@ void SimpleDiffuseGIRayGen()
     // Sample light position and light direction
     float3 lightOrigin, lightDir, lightIntensity;
     sampleLight(randSeed, lightOrigin, lightDir, lightIntensity);
-    bool takeContribution[4] = { true, true, true, true };
+    bool takeContribution[9];
+    for (uint i = 0; i < 9; i++)
+        takeContribution[i] = true;
     
     // first vertex is the light sample
     lightPath[0].posW = lightOrigin;
@@ -156,7 +158,7 @@ void SimpleDiffuseGIRayGen()
         shadeColor = cameraPath[i].color * evalDirectWrapper(cameraPath[i + 1], randSeed);
         shadeColor = clampVec(shadeColor / (i + 2));
         bool colorsNan = any(isnan(shadeColor));
-        gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+        gOutput[launchIndex] = gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f);
     }
     
     // add light-tracing weighted contributions

@@ -183,7 +183,7 @@ float evalGWithoutV(PathVertex a, PathVertex b)
     return cosA * cosB * invLengthAB * invLengthAB;
 }
 
-float3 getUnweightedContribution(PathVertex cameraPath[4], PathVertex lightPath[4], uint cameraIndex, uint lightIndex, float G)
+float3 getUnweightedContribution(PathVertex cameraPath[9], PathVertex lightPath[9], uint cameraIndex, uint lightIndex, float G)
 {
 	// this function only computes unweighted contribution for path length > 1
     if (cameraIndex <= 1 || lightIndex <= 1)

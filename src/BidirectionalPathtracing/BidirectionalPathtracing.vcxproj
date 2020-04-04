@@ -60,7 +60,7 @@
     <None Include="Data\BDPTUtils.hlsli" />
     <None Include="Data\globalIlluminationRay.hlsli" />
     <None Include="Data\MaterialUtils.hlsli" />
-    <None Include="Data\microfacetBRDFUtils.hlsli" />
+    <None Include="Data\BRDFUtils.hlsli" />
     <None Include="Data\RayPathData.hlsli" />
     <None Include="Data\standardShadowRay.hlsli" />
   </ItemGroup>

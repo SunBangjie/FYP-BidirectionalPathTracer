@@ -29,8 +29,8 @@ protected:
 	RayLaunch::SharedPtr    mpRays;                       ///< Our wrapper around a DX Raytracing pass
     RtScene::SharedPtr      mpScene;                      ///< Our scene file (passed in from app)  
 
-	int32_t                 mUserSpecifiedRayDepth = 2;   ///<  What is the current maximum ray depth
-	const int32_t           mMaxPossibleRayDepth = 3;     ///<  The largest ray depth we support (without recompile)
+	int32_t                 mUserSpecifiedRayDepth = 3;   ///<  What is the current maximum ray depth
+	const int32_t           mMaxPossibleRayDepth = 8;     ///<  The largest ray depth we support (without recompile)
 
 	int32_t                 mMaterialIndex = 0;           ///<  What material to use?
 	const int32_t           mNumOfMaterials = 2;          ///<  Total number of materials supported
