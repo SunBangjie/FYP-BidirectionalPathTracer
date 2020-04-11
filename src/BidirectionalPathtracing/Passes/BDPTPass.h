@@ -33,7 +33,7 @@ protected:
 	const int32_t           mMaxPossibleRayDepth = 8;     ///<  The largest ray depth we support (without recompile)
 
 	int32_t                 mMaterialIndex = 0;           ///<  What material to use?
-	const int32_t           mNumOfMaterials = 3;          ///<  Total number of materials supported
+	const int32_t           mNumOfMaterials = 2;          ///<  Total number of materials supported
 
 	float                   mClampUpper = 0.9;            ///<  Upper bound of the clamping of contributions
 	float                   mRefractiveIndex = 1.0;       ///<  RefractiveIndex of dielectric materials

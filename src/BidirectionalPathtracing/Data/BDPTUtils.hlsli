@@ -223,7 +223,7 @@ float3 getUnweightedContribution(PathVertex cameraPath[9], PathVertex lightPath[
     return aL * cst * aE;
 }
 
-float getWeight(PathVertex cameraPath[9], PathVertex lightPath[9], uint cameraIndex, uint lightIndex)
+float getWeightPower(PathVertex cameraPath[9], PathVertex lightPath[9], uint cameraIndex, uint lightIndex)
 {
     uint totalLength = cameraIndex + lightIndex;
     float totalPdf = 0;
@@ -245,6 +245,33 @@ float getWeight(PathVertex cameraPath[9], PathVertex lightPath[9], uint cameraIn
         if (i == cameraIndex, j == lightIndex)
         {
             currentPdf = pE * pE * pL * pL;
+        }
+    }
+    return currentPdf / totalPdf;
+}
+
+float getWeightLinear(PathVertex cameraPath[9], PathVertex lightPath[9], uint cameraIndex, uint lightIndex)
+{
+    uint totalLength = cameraIndex + lightIndex;
+    float totalPdf = 0;
+    float currentPdf = 1;
+    for (uint i = 0; i <= totalLength; i++)
+    {
+        uint j = totalLength - i;
+        float pE = cameraPath[0].pdfForward;
+        for (uint x = 1; x <= i; x++)
+        {
+            pE *= cameraPath[x].pdfForward * evalGWithoutV(cameraPath[x - 1], cameraPath[x]);
+        }
+        float pL = lightPath[0].pdfForward;
+        for (uint x = 1; x <= j; x++)
+        {
+            pL *= lightPath[x].pdfForward * evalGWithoutV(lightPath[x - 1], lightPath[x]);
+        }
+        totalPdf += pE * pL;
+        if (i == cameraIndex, j == lightIndex)
+        {
+            currentPdf = pE * pL;
         }
     }
     return currentPdf / totalPdf;

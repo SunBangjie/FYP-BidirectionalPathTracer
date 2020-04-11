@@ -156,7 +156,7 @@ void SimpleDiffuseGIRayGen()
     for (uint i = 0; i < gMaxDepth; i++)
     {
         shadeColor = cameraPath[i].color * evalDirectWrapper(cameraPath[i + 1], randSeed);
-        //shadeColor = clampVec(shadeColor / (i + 2));
+        shadeColor = clampVec(shadeColor / (i + 2));
         bool colorsNan = any(isnan(shadeColor));
         gOutput[launchIndex] = gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f);
     }
@@ -191,7 +191,7 @@ void SimpleDiffuseGIRayGen()
                     shadeColor = (lightPath[i].color * connectToCamera(lightPath[i + 1])) * G;
                     shadeColor = clampVec(shadeColor / (i + 2));
                     bool colorsNan = any(isnan(shadeColor));
-                    //gOutput[id] = saturate(gOutput[id] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+                    gOutput[id] = saturate(gOutput[id] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
                 }
                 else
                 {
@@ -220,9 +220,9 @@ void SimpleDiffuseGIRayGen()
             if (V)
             {
                 shadeColor = getUnweightedContribution(cameraPath, lightPath, cameraLength, lightLength, G);
-                //shadeColor *= getWeight(cameraPath, lightPath, cameraLength, lightLength);
+                shadeColor = clampVec(shadeColor / totalLength);
                 bool colorsNan = any(isnan(shadeColor));
-                //gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+                gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
             }
         }
     }

@@ -60,7 +60,7 @@ void BDPTPass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
 	dirty |= (int)pGui->addIntVar("Max Ray Depth", mUserSpecifiedRayDepth, 0, mMaxPossibleRayDepth);
-	dirty |= (int)pGui->addIntVar("Material", mMaterialIndex, 0, mNumOfMaterials);
+	dirty |= (int)pGui->addIntVar("Material", mMaterialIndex, 0, mNumOfMaterials-1);
 	dirty |= pGui->addFloatVar("Clamping Upper Bound", mClampUpper, 0.001, 1.0);
 	dirty |= pGui->addFloatVar("Refractive Index (only for dielectric material)", mRefractiveIndex, 0.1, 5.0);
 	if (dirty) setRefreshFlag();
