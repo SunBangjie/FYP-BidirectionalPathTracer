@@ -132,7 +132,7 @@ uint2 getLaunchIndexFromDirection(float3 dir, uint2 dim, float2 jitter)
     float d2 = dot(dir, gCamera.cameraV) / dot(gCamera.cameraV, gCamera.cameraV);
     float d3 = dot(dir, gCamera.cameraW) / dot(gCamera.cameraW, gCamera.cameraW);
     float2 ndc = float2(d1 / d3, -d2 / d3);
-    float2 pixelCenter = ndc * (0.5, 0.5) + float2(0.5, 0.5);
+    float2 pixelCenter = ndc * float2(0.5, 0.5) + float2(0.5, 0.5);
     uint2 id = uint2(round(pixelCenter * dim - jitter));
     return id;
 }
@@ -185,17 +185,17 @@ float evalGWithoutV(PathVertex a, PathVertex b)
 
 float3 getUnweightedContribution(PathVertex cameraPath[9], PathVertex lightPath[9], uint cameraIndex, uint lightIndex, float G)
 {
-	// this function only computes unweighted contribution for path length > 1
-    if (cameraIndex <= 1 || lightIndex <= 1)
+	// this function only computes unweighted contribution for total path length >= 2
+    if (cameraIndex == 0 || lightIndex == 0)
         return float3(0, 0, 0);
 	
 	// get end vertex from each path
-    PathVertex cameraEndV = cameraPath[cameraIndex - 1];
-    PathVertex lightEndV = lightPath[lightIndex - 1];
+    PathVertex cameraEndV = cameraPath[cameraIndex];
+    PathVertex lightEndV = lightPath[lightIndex];
 	
 	// get throughput from the last vertex of each path
-    float3 aE = cameraPath[cameraIndex - 2].color;
-    float3 aL = lightPath[cameraIndex - 2].color;
+    float3 aE = cameraPath[cameraIndex - 1].color;
+    float3 aL = lightPath[cameraIndex - 1].color;
 	
 	// connect two end vertices
     float3 connectDir = normalize(cameraEndV.posW - lightEndV.posW); // from light to camera
@@ -204,7 +204,7 @@ float3 getUnweightedContribution(PathVertex cameraPath[9], PathVertex lightPath[
     
 	// compute fsL
     wi = connectDir; // towards camera
-    wo = normalize(lightPath[lightIndex - 2].posW - lightEndV.posW); // towards light
+    wo = normalize(lightPath[lightIndex - 1].posW - lightEndV.posW); // towards light
     float3 fsL = evalBRDF(wi, wo, lightEndV.posW, lightEndV.N, lightEndV.N, lightEndV.dif, lightEndV.spec, lightEndV.rough, lightEndV.isSpecular);
 
     if (all(fsL == 0))
@@ -212,7 +212,7 @@ float3 getUnweightedContribution(PathVertex cameraPath[9], PathVertex lightPath[
 	
 	// compute fsE
     wi = -connectDir; // towards light
-    wo = normalize(cameraPath[cameraIndex - 2].posW - cameraEndV.posW); // towards camera
+    wo = normalize(cameraPath[cameraIndex - 1].posW - cameraEndV.posW); // towards camera
     float3 fsE = evalBRDF(wi, wo, cameraEndV.posW, cameraEndV.N, cameraEndV.N, cameraEndV.dif, cameraEndV.spec, cameraEndV.rough, cameraEndV.isSpecular);
     
     if (all(fsE == 0))
@@ -221,4 +221,31 @@ float3 getUnweightedContribution(PathVertex cameraPath[9], PathVertex lightPath[
     float3 cst = fsL * G * fsE;
 	
     return aL * cst * aE;
+}
+
+float getWeight(PathVertex cameraPath[9], PathVertex lightPath[9], uint cameraIndex, uint lightIndex)
+{
+    uint totalLength = cameraIndex + lightIndex;
+    float totalPdf = 0;
+    float currentPdf = 1;
+    for (uint i = 0; i <= totalLength; i++)
+    {
+        uint j = totalLength - i;
+        float pE = cameraPath[0].pdfForward;
+        for (uint x = 1; x <= i; x++)
+        {
+            pE *= cameraPath[x].pdfForward * evalGWithoutV(cameraPath[x - 1], cameraPath[x]);
+        }
+        float pL = lightPath[0].pdfForward;
+        for (uint x = 1; x <= j; x++)
+        {
+            pL *= lightPath[x].pdfForward * evalGWithoutV(lightPath[x - 1], lightPath[x]);
+        }
+        totalPdf += pE * pE * pL * pL;
+        if (i == cameraIndex, j == lightIndex)
+        {
+            currentPdf = pE * pE * pL * pL;
+        }
+    }
+    return currentPdf / totalPdf;
 }

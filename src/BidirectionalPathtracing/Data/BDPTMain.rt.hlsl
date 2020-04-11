@@ -32,7 +32,6 @@ shared Texture2D<float4> gEmissive;
 shared RWTexture2D<float4> gOutput;
 
 #include "RayPathData.hlsli"
-#include "BRDFUtils.hlsli"
 #include "MaterialUtils.hlsli"
 #include "BDPTUtils.hlsli"
 #include "standardShadowRay.hlsli"
@@ -90,7 +89,7 @@ void SimpleDiffuseGIRayGen()
     cameraPath[0].posW = gCamera.posW;
     cameraPath[0].N = normalize(gCamera.cameraW);
     cameraPath[0].color = float3(1.0f); // We = 1 for pinhole camera
-    cameraPath[0].pdfForward = 1.0f / (launchDim.x * launchDim.y); // the probability of shooting in the direction
+    cameraPath[0].pdfForward = 1.0f; // the probability of shooting in the direction
     
     // We can make use of the G-buffer to update the second vertex
     float3 outDir;
@@ -156,7 +155,7 @@ void SimpleDiffuseGIRayGen()
     for (uint i = 0; i < gMaxDepth; i++)
     {
         shadeColor = cameraPath[i].color * evalDirectWrapper(cameraPath[i + 1], randSeed);
-        shadeColor = clampVec(shadeColor / (i + 2));
+        //shadeColor = clampVec(shadeColor / (i + 2));
         bool colorsNan = any(isnan(shadeColor));
         gOutput[launchIndex] = gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f);
     }
@@ -191,7 +190,7 @@ void SimpleDiffuseGIRayGen()
                     shadeColor = (lightPath[i].color * connectToCamera(lightPath[i + 1])) * G;
                     shadeColor = clampVec(shadeColor / (i + 2));
                     bool colorsNan = any(isnan(shadeColor));
-                    gOutput[id] = saturate(gOutput[id] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+                    //gOutput[id] = saturate(gOutput[id] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
                 }
                 else
                 {
@@ -204,15 +203,15 @@ void SimpleDiffuseGIRayGen()
 
     // add connections of camera and light path vertices
     shadeColor = float3(0, 0, 0);
-    for (uint totalLength = 4; totalLength <= gMaxDepth + 2; totalLength++)
+    for (uint totalLength = 2; totalLength <= gMaxDepth; totalLength++)
     {
-        for (uint cameraLength = 2; cameraLength <= gMaxDepth; cameraLength++)
+        for (uint cameraLength = 1; cameraLength <= gMaxDepth - 1; cameraLength++)
         {
             uint lightLength = totalLength - cameraLength;
-            float G = evalGWithoutV(cameraPath[cameraLength - 1], lightPath[lightLength - 1]);
+            float G = evalGWithoutV(cameraPath[cameraLength], lightPath[lightLength]);
             
-            float3 posA = cameraPath[cameraLength - 1].posW;
-            float3 posB = lightPath[lightLength - 1].posW;
+            float3 posA = cameraPath[cameraLength].posW;
+            float3 posB = lightPath[lightLength].posW;
             float lengthAB = length(posB - posA);
             float3 dirAB = (posB - posA) / lengthAB;
             bool V = shadowRayVisibility(posA, dirAB, gMinT, lengthAB);
@@ -220,9 +219,9 @@ void SimpleDiffuseGIRayGen()
             if (V)
             {
                 shadeColor = getUnweightedContribution(cameraPath, lightPath, cameraLength, lightLength, G);
-                shadeColor = clampVec(shadeColor / (totalLength - 1));
+                //shadeColor *= getWeight(cameraPath, lightPath, cameraLength, lightLength);
                 bool colorsNan = any(isnan(shadeColor));
-                gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
+                //gOutput[launchIndex] = saturate(gOutput[launchIndex] + float4(colorsNan ? float3(0, 0, 0) : shadeColor, 1.0f));
             }
         }
     }
