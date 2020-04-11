@@ -32,6 +32,7 @@ shared Texture2D<float4> gEmissive;
 shared RWTexture2D<float4> gOutput;
 
 #include "RayPathData.hlsli"
+#include "BRDFUtils.hlsli"
 #include "MaterialUtils.hlsli"
 #include "BDPTUtils.hlsli"
 #include "standardShadowRay.hlsli"
