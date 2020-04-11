@@ -152,6 +152,11 @@ void SimpleDiffuseGIRayGen()
     // Initialize shadeColor
     float3 shadeColor = float3(0, 0, 0);
     
+    if (any(pixelEmissive.rgb > 0.0f))
+    {
+        gOutput[launchIndex] += pixelEmissive;
+    }
+    
     // Add path-tracing weighted contributions
     for (uint i = 0; i < gMaxDepth; i++)
     {

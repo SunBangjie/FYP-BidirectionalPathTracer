@@ -68,10 +68,10 @@ protected:
 	} mInputTex;
 
     //determine whether we want to show denoise result or not
-    bool                          mDoDenoise = true;
+    bool                          mDoDenoise = false;
 	bool                          mBMFR_preprocess = true;
 	bool                          mBMFR_postprocess = true;
-	bool                          mBMFR_regression = true;
+	bool                          mBMFR_regression = false;
 	bool						  mBMFR_removeFeatures = true;
 
 private:
