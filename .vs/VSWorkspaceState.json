@@ -2,7 +2,13 @@
   "ExpandedNodes": [
     "",
     "\\src",
+    "\\src\\BidirectionalPathtracing",
+    "\\src\\BidirectionalPathtracing\\Passes",
+    "\\src\\CommonPasses",
+    "\\src\\CommonPasses\\Data",
+    "\\src\\CommonPasses\\Data\\CommonPasses",
     "\\src\\Falcor"
   ],
+  "SelectedNode": "\\src\\CommonPasses\\SimpleAccumulationPass.cpp",
   "PreviewInSolutionExplorer": false
 }

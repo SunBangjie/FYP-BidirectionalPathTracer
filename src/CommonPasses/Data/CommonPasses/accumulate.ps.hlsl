@@ -19,6 +19,7 @@
 cbuffer PerFrameCB
 {
     uint gAccumCount;
+    uint gMaxAccumCount;
 }
 
 Texture2D<float4>   gLastFrame;
@@ -26,9 +27,16 @@ Texture2D<float4>   gCurFrame;
 
 float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_Target0
 {
-    uint2 pixelPos = (uint2)pos.xy;
+    uint2 pixelPos = (uint2) pos.xy;
     float4 curColor = gCurFrame[pixelPos];
     float4 prevColor = gLastFrame[pixelPos];
+    if (gAccumCount < gMaxAccumCount)
+    {
+        return (gAccumCount * prevColor + curColor) / (gAccumCount + 1);
+    }
+    else
+    {
+        return prevColor;
+    }
 
-	return (gAccumCount * prevColor + curColor) / (gAccumCount + 1);
 }

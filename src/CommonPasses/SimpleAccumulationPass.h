@@ -66,4 +66,7 @@ protected:
 
 	// How many frames have we accumulated so far?
 	uint32_t                      mAccumCount = 0;
+	
+	int32_t                 mCountLimit = 100;           
+	const int32_t           mMaxCountLimit = 10000;          
 };

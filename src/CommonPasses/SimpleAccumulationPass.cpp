@@ -86,6 +86,8 @@ void SimpleAccumulationPass::renderGui(Gui* pGui)
         setRefreshFlag();
     }
 
+	(int)pGui->addIntVar("Max frames to accumulate", mCountLimit, 1, mMaxCountLimit);
+
 	// Display a count of accumulated frames
 	pGui->addText("");
 	pGui->addText((std::string("Frames accumulated: ") + std::to_string(mAccumCount)).c_str());
@@ -116,7 +118,8 @@ void SimpleAccumulationPass::execute(RenderContext* pRenderContext)
 
     // Set shader parameters for our accumulation
 	auto shaderVars = mpAccumShader->getVars();
-	shaderVars["PerFrameCB"]["gAccumCount"] = mAccumCount++;
+	shaderVars["PerFrameCB"]["gAccumCount"] = mAccumCount < mCountLimit ? mAccumCount++ : mCountLimit;
+	shaderVars["PerFrameCB"]["gMaxAccumCount"] = mCountLimit;
 	shaderVars["gLastFrame"] = mpLastFrame;
 	shaderVars["gCurFrame"]  = inputTexture;
 
